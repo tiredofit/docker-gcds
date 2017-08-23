@@ -1,0 +1,25 @@
+version: '2'
+
+services:
+  gcds-app:
+    image: tiredofit/gcds:latest
+    container_name: gcds-app
+    volumes:
+    - ./logs:/var/log/gcds
+    - ./config:/assets/config
+    - /etc/localtime:/etc/localtime:ro
+    environment:
+    - DRY_RUN=TRUE
+    - LOG_LEVEL=ERROR
+    - CONFIGGILE=config.xml
+    - LOGFILE=gcds-sync.log
+    - ZABBIX_HOSTNAME=gcds-app
+    networks:
+      - proxy-tier
+    restart: always
+
+networks:
+  proxy-tier:
+    external:
+      name: nginx-proxy
+
