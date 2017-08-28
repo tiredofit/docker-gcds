@@ -66,7 +66,9 @@ The following directories are used for configuration and can be mapped for persi
 
 ### Environment Variables
 
-Below is the complete list of available options that can be used to customize your installation.
+
+Along with the Environment Variables from the [Base image](https://hub.docker.com/r/tiredofit/ubuntu), below is the complete list of available options that can be used to customize your installation.
+
 
 | Parameter | Description |
 |-----------|-------------|
