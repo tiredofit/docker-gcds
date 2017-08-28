@@ -1,3 +1,7 @@
+## 3.0 2017-08-27 <dave at tiredofit dot ca>
+
+* Support New Base
+
 ## 2.0 2017-07-21 <dave at tiredofit dot ca>
 
 * Rebase with S6

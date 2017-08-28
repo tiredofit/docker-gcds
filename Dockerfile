@@ -5,8 +5,7 @@ MAINTAINER Dave Conroy <dave at tiredofit dot ca>
   ENV TZ=America/Vancouver
 
 ### GCDS Dependencies
-  ADD install/install.sh /usr/src/install.sh
-  RUN chmod +x /usr/src/install.sh
+  ADD install/usr/src /usr/src/
 
 ### Dependencies Package Install
   RUN apt-get -y update && \
@@ -32,12 +31,8 @@ MAINTAINER Dave Conroy <dave at tiredofit dot ca>
   rm -rf /usr/src/*
 
 
-### OAuth2 Hack
-  COPY install/gcds/auth.sh /usr/local/GoogleCloudDirSync/auth.sh
-  RUN chmod +x /usr/local/GoogleCloudDirSync/auth.sh
-
-## S6 Setup
-  ADD install/s6 /etc/s6
+### Files Addition
+  ADD install /
 
 
 ### Endpoint Configuration
