@@ -1,5 +1,5 @@
 FROM tiredofit/ubuntu:16.04
-MAINTAINER Dave Conroy <dave at tiredofit dot ca>
+LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
 ### Set Environment Variables
   ENV TZ=America/Vancouver
