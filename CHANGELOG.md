@@ -1,3 +1,7 @@
+## 3.1 2017-11-13 <dave at tiredofit dot ca>
+
+* Added SMTP_HOST, SMTP_RCPT, SMTP_FROM, SMTP_PORT variables to send email when GCDS needs reauthorizing.
+
 ## 3.0 2017-08-27 <dave at tiredofit dot ca>
 
 * Support New Base

@@ -1,8 +1,11 @@
 FROM tiredofit/ubuntu:16.04
 LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
-### Set Environment Variables
-  ENV TZ=America/Vancouver
+### Set Default Environment Variables
+  ENV SMTP_FROM=noreply@example.com \
+      SMTP_HOST=postfix-relay \
+      SMTP_PORT=25 \
+      SMTP_RCPT=sysadmin@example.com
 
 ### GCDS Dependencies
   ADD install/usr/src /usr/src/
@@ -19,12 +22,6 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
        apt-get clean && \
        rm -rf /var/lib/apt/lists/* && \
 
-### Fix Timezone   
-  rm -rf /etc/localtime && \
-  ln -fs /usr/share/zoneinfo/US/Pacific-New /etc/localtime && \
-  dpkg-reconfigure -f noninteractive tzdata && \
-
-
 ### Install GCDS via Script
   curl https://dl.google.com/dirsync/dirsync-linux64.sh >/usr/src/gcds.sh && \
   /usr/src/install.sh && \
@@ -33,7 +30,6 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
 ### Files Addition
   ADD install /
-
 
 ### Endpoint Configuration
   WORKDIR /usr/local/GoogleCloudDirSync

@@ -6,7 +6,9 @@ This will build a container for Google Cloud Directory Sync (old name GADS)
 
 *    Downloads Latest Release from Google
 
-This image needs manual configuration to get configuration running, it is not dynamic! It also needs work for automated execution, so be careful and setup monitoring should it fail. You will need to manually create the configuration file via the GCDS Desktop tools and place it inside the container via mapping to `/assets/config`. 
+*This image needs manual configuration to get configuration running, it is not dynamic! It also needs work for automated execution, so 
+be careful and setup monitoring should it fail. You will need to manually create the configuration file via the GCDS Desktop tools and 
+place it inside the container via mapping to `/assets/config`.*
 
 This Container uses tiredofit/ubuntu:16.04 as a base w/S6 Init System and Zabbix Monitoring.
 
@@ -49,7 +51,7 @@ docker pull hub.docker.com/tiredofit/gcds
 
 * The quickest way to get started is using [docker-compose](https://docs.docker.com/compose/). See the examples folder for a working [docker-compose.yml](examples/docker-compose.yml) that can be modified for development or production use.
 
-You must start the container, and then manually verify the OAUTH information via a browser in order for synchronziation to start.
+*You must start the container, and then manually verify the OAUTH information via a browser in order for synchronziation to start.*
 
 
 
@@ -66,18 +68,20 @@ The following directories are used for configuration and can be mapped for persi
 
 ### Environment Variables
 
-
 Along with the Environment Variables from the [Base image](https://hub.docker.com/r/tiredofit/ubuntu), below is the complete list of available options that can be used to customize your installation.
 
 
 | Parameter | Description |
 |-----------|-------------|
-| `CONFIG_FILE | The name of your GCDS configuration file (e.g. `gcds-conf.xml`)
+| `CONFIG_FILE` | The name of your GCDS configuration file (e.g. `gcds-conf.xml`)
 | `DRY_RUN` | Execute a Dry Run Test (e.g. `TRUE` / `FALSE` Default: TRUE) |
 | `LOG_LEVEL` | GCDS Error Logging level (e.g. `ERROR`) |
 | `LOG_FILE` | Name of Logfile to output (Default `sync.log`) |
 | `FLUSH` | Enable Flushing of Data afte rSync |
-
+| `SMTP_FROM` | Send Warning message to Authorize OAUTH from this email address (e.g. `gcds@example.com`) |
+| `SMTP_HOST` | Hostname to send SMTP to (e.g. `postfix-relay`) |
+| `SMTP_PORT` | Port of `SMTP_HOST` to send to (e.g. `25`) |
+| `SMTP_RCPT` | Recipeient of Warning email (e.g. `sysadmin@example.com`) |
 
 # Maintenance
 #### Shell Access

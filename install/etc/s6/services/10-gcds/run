@@ -20,12 +20,12 @@ sleep 2
 	mkdir -p /var/log/gcds
 
 	if [ ! -f /assets/config/$CONFIGFILE ]; then
-	    echo "No Configuration File Template Found.. Exiting.."
+	    echo "** [gcds] No Configuration File Template Found.. Exiting.."
 	    exit 0
 	fi
 
 	## Start GCDS
-	echo 'Starting Google Cloud Directory Sync Services....'
+	echo '** [gcds] Starting Google Cloud Directory Sync Services....'
 	## Argument Check
 	if [ $FLUSH = "TRUE" ];  then
 		FLUSH_ARG=--flush
@@ -87,22 +87,22 @@ EOD
 	    echo "***"
 	    echo 
 	    echo "The GCDS Docker Container has recently started and needs to have additional steps completed in order for the GoogleCloudDirectorySync Service to continue. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script." | mailx -v \
-	      -r "gcds@selfdesign.org" \
+	      -r "$SMTP_FROM" \
 	      -s "[GCDS] OAUTH2 Authorization Required!" \
-	      -S smtp="postfix-relay:25" \
-	      replaceme@email.com & >/dev/null
+	      -S smtp="$SMTP_HOST:$SMTP_PORT" \
+	      $SMTP_RCPT & >/dev/null
 	    sleep 120
 	done  
 
 		if [ $DRY_RUN  = "TRUE" ];  then 
-			echo 'Starting a Dry Run.. Please Change DRY_RUN to FALSE in docker-compose.yml to commit changes..'
+			echo '** [gcds] Starting a Dry Run.. Please Change DRY_RUN to FALSE in docker-compose.yml to commit changes..'
 			/usr/local/GoogleCloudDirSync/sync-cmd -V
 		    /usr/local/GoogleCloudDirSync/sync-cmd -l $LOG_LEVEL -r /var/log/gcds/$LOGFILE -c /usr/local/GoogleCloudDirSync/gcds_conf.xml -o $FLUSH_ARG
 		else
             echo "$CRON_EXP /usr/local/GoogleCloudDirSync/sync-cmd -a -l $LOG_LEVEL -r /var/log/gcds/$LOGFILE -c /usr/local/GoogleCloudDirSync/gcds_conf.xml -o $FLUSH_ARG >/dev/null 2>&1" >>/assets/cron/crontab.txt
 	    	touch /etc/crontab /etc/cron.d /etc/cron.daily /etc/cron.hourly /etc/cron.monthly /etc/cron.weekly
 			
-			echo 'Starting Live Run..'
+			echo '** [gcds] Starting Live Run..'
 		    /usr/local/GoogleCloudDirSync/sync-cmd -a -l $LOG_LEVEL -r /var/log/gcds/$LOGFILE -c /usr/local/GoogleCloudDirSync/gcds_conf.xml -o $FLUSH_ARG
 		fi
 
