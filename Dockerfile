@@ -10,8 +10,12 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 ### GCDS Dependencies
   ADD install/usr/src /usr/src/
 
+### Add User
+  RUN addgroup --gid 389 asterisk && \
+      adduser --uid 389 --gid 389 --gecos "Google Cloud Directory Sync" --disabled-password gcds && \
+
 ### Dependencies Package Install
-  RUN apt-get -y update && \
+      apt-get -y update && \
        LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes --no-install-recommends \
           ca-certificates \
           expect \

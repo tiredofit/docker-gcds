@@ -11,7 +11,7 @@ read -rsp $'Press any key to continue...\n' -n 1 key
 #refreshing GCDS oauth token
 
 #the business
-/usr/local/GoogleCloudDirSync/upgrade-config -Oauth selfdesign.org -c gcds_conf.xml
+/usr/local/GoogleCloudDirSync/upgrade-config -Oauth $DOMAIN -c gcds_conf.xml
 
 #visit resulting URL, copy confirmation code, paste back into prompt
 /usr/local/GoogleCloudDirSync/upgrade-config -testgoogleapps -c gcds_conf.xml

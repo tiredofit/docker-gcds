@@ -7,6 +7,7 @@ done
 
 if [ ! -f /tmp/state/10-gcds ]; then
 sleep 2
+    
 
 	VARIABLE=${VARIABLE:-ENTRY}
 	LOG_LEVEL=${LOG_LEVEL:-ERROR}
@@ -16,9 +17,10 @@ sleep 2
 
 
 	## Sanity Check
-
+    chown -R gcds /usr/local/GoogleCloudDirSync
 	mkdir -p /var/log/gcds
-
+    chown -R gcds /var/log/gcds
+    
 	if [ ! -f /assets/config/$CONFIGFILE ]; then
 	    echo "** [gcds] No Configuration File Template Found.. Exiting.."
 	    exit 0
