@@ -1,41 +1,42 @@
-FROM tiredofit/ubuntu:16.04
+FROM tiredofit/debian:stretch
 LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
-### Set Default Environment Variables
-  ENV SMTP_FROM=noreply@example.com \
-      SMTP_HOST=postfix-relay \
-      SMTP_PORT=25 \
-      SMTP_RCPT=sysadmin@example.com
+### Set Environment Variable
+  ENV DOMAIN=example.com
 
-### GCDS Dependencies
-  ADD install/usr/src /usr/src/
-
-### Add User
-  RUN addgroup --gid 389 asterisk && \
-      adduser --uid 389 --gid 389 --gecos "Google Cloud Directory Sync" --disabled-password gcds && \
-
+  RUN set -x && \
+      \
 ### Dependencies Package Install
       apt-get -y update && \
        LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes --no-install-recommends \
           ca-certificates \
           expect \
-          heirloom-mailx \
-          ldap-utils \
           libxml2-utils \
+          ldap-utils \
+          python \
+          python-ldap \
+          s-nail \
           && \
+       \
        apt-get clean && \
        rm -rf /var/lib/apt/lists/* && \
-
+      \
 ### Install GCDS via Script
-  curl https://dl.google.com/dirsync/dirsync-linux64.sh >/usr/src/gcds.sh && \
-  /usr/src/install.sh && \
-  rm -rf /usr/src/*
+      echo "sys.programGroup.linkDir=/usr/bin\nsys.languageId=en\nsys.installationDir=/gcds\n\nsys.programGroup.enabled$Boolean=true\nsys.programGroup.allUsers$Boolean=true\nsys.programGroup.name='Google Cloud Directory Sync'\n" > /usr/src/gcds.varfile && \
+      curl -ssL -o /usr/src/install.sh https://dl.google.com/dirsync/dirsync-linux64.sh && \
+      chmod +x /usr/src/install.sh && \
+      /usr/src/install.sh -q -varfile /usr/src/gcds.varfile && \
+      rm -rf /usr/src/* && \
+      \
+### File Persistence Modifications
+      mkdir -p /assets && \
+      cp -R /root/.java /assets/ && \
+      rm -rf /root/.java && \
+      rm -rf /root/SyncState && \
+      rm -rf /var/log/*
 
+### Endpoint Configuration
+  WORKDIR /gcds
 
 ### Files Addition
   ADD install /
-
-### Endpoint Configuration
-  WORKDIR /usr/local/GoogleCloudDirSync
-  ENTRYPOINT ["/init"]
-

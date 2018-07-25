@@ -1,0 +1,159 @@
+#!/usr/bin/with-contenv bash
+
+if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ];  then
+  set -x
+fi
+
+	DOMAIN=${DOMAIN:-"example.com"}
+	DRY_RUN=${DRY_RUN:-TRUE}
+	FORCED_AUTH=${FORCED_AUTH:-FALSE}
+	FLUSH=${FLUSH:-FALSE}
+	LOG_LEVEL=${LOG_LEVEL:-ERROR}
+	LOGFILE=${LOGFILE:-sync.log}
+	MAIL_FROM=${MAIL_FROM:-"gcds@example.com"}
+	MAIL_TO=${MAIL_TO:-"admin@example.com"}
+	SMTP_HOST=${SMTP_HOSTL-"postfix-relay"}
+	SMTP_PORT=${SMTP_PORT:-"25"}
+    
+    ## Sanity Check
+	mkdir -p /var/log/gcds
+    #ln -s /home/gcds/GADS_nonAddressPrimaryKeyFile.tsv /gcds/GADS_nonAddressPrimaryKeyFile.tsv 
+    if [ ! -d /assets/config/.java ]; then
+	    cp -R /assets/.java /assets/config/
+	fi
+
+    mkdir -p /assets/config/.SyncState 
+    ln -s /assets/config/.java /root/.java
+    ln -s /assets/config/.SyncState /root/syncState
+    #ln -s /assets/config/.GADS_nonAddressPrimaryKeyFile.tsv /gcds/GADS_nonAddressPrimaryKeyFile.tsv 
+
+	if [ ! -f /assets/config/$CONFIGFILE ]; then
+	    echo "** [gcds] No Configuration File Template Found.. Exiting.."
+	    exit 1
+	fi
+
+    rm -rf /root/syncState/*.lock
+    
+	## Start GCDS
+	echo '** [gcds] Starting Google Cloud Directory Sync Services....'
+	## Argument Check
+	if [ $FLUSH = "TRUE" ];  then
+		FLUSH_ARG=--flush
+	else
+		FLUSH_ARG=
+	fi
+
+	if [ "$FORCE_AUTH" = "FALSE" ] || [ "$FORCE_AUTH" = "false" ];  then
+      	AUTHORIZED_CONFIG=`cat /assets/config/AUTHORIZED_CONFIG
+    else
+    	rm -rf /assets/config/AUTHORIZED_CONFIG
+    fi
+	    
+
+    if [ "$AUTHORIZED_CONFIG" != "$CONFIGFILE" ]; then
+    	echo "** [gcds] Detected a new configuration file. Resetting Encryption Key"
+	## Create Encrypted Password Routines
+	/usr/bin/expect <<EOD
+log_file /tmp/expect.log
+spawn /gcds/encrypt-util -c /assets/config/$CONFIGFILE
+expect ":"
+send $GCDS_PASS\r
+interact
+expect close
+EOD
+
+		tail -n +4 /tmp/expect.log > /tmp/sanitized
+		sed -i -e "s/Encrypted value (case sensitive, please cut and paste): //g" /tmp/sanitized
+
+		GCDS_ENCRYPTED_PASS=$(sed -n '3p' /tmp/sanitized)
+		GCDS_ENCRYPTED_PASS=$(echo $GCDS_ENCRYPTED_PASS|tr -d '\040\011\012\015')
+		GCDS_ENCRYPTED_PASS=${GCDS_ENCRYPTED_PASS:1:${#GCDS_ENCRYPTED_PASS}}
+		rm -rf /tmp/expect.log /tmp/sanitized
+
+		GCDS_XML_FILE=/gcds/gcds_conf.xml
+		cp /assets/config/$CONFIGFILE $GCDS_XML_FILE
+
+		#start - new xmllint approach
+		function sedeasy(){
+		  sed -i "s/$(echo $1 | sed -e 's/\([[\/.*]\|\]\)/\\&/g')/$(echo $2 | sed -e 's/[\/&]/\\&/g')/g" $3
+		}
+
+		GCDS_XML_PATH="//config/plugins/local/plugin/config/authCredentialsEncrypted"
+		GCDS_NEW_PASS="<authCredentialsEncrypted>$GCDS_ENCRYPTED_PASS</authCredentialsEncrypted>"
+
+		GCDS_OLD_PASS=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+
+		sedeasy $GCDS_OLD_PASS $GCDS_NEW_PASS $GCDS_XML_FILE >/dev/null 2&>1
+
+		  ## Go in endless loop until auth file exists
+		COUNTER=1
+		while ! [ -f /gcds/oauthorized ];
+		do
+		    echo "***"
+		    echo "*** CONTAINER NOT FULLY OPERATIONAL"
+		    echo "*** You must enter this container and complete the OAUTH2 Manual Verification!"
+		    echo "***"
+		    echo "*** 'docker exec -it (container-name) bash'"
+		    echo "*** 'sh auth.sh'"
+		    echo "***"
+		    echo 
+		    echo "The GCDS Docker Container has recently started and needs to have additional steps completed in order for the GoogleCloudDirectorySync Service to continue. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script." | s-nail -v \
+		      -r "$MAIL_FROM" \
+		      -s "[GCDS] OAUTH2 Authorization Required!" \
+		      -S smtp="$SMTP_HOST:$SMTP_PORT" \
+		      $MAIL_TO & >/dev/null 2>&1
+		    
+		    COUNTER=$((COUNTER +1 ))
+		    
+		    /usr/local/bin/rocketchat-alert "#it-systems" "*OAUTH required*" "Google Cloud Directory Sync service has just restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n "  "gcds-app"
+
+	        if [ $COUNTER = "15" ] ; then
+	        	/usr/local/bin/rocketchat-alert "#it" "*Google Cloud Service Down!*" "Please alert Sysadmins - The Google Cloud Directory Sync service has restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n Any synchronizing of LDAP accounts to Google will fail until this is completed!\n"  "gcds-app"        		    
+	        	COUNTER=1
+	        fi
+		    
+		    sleep 120
+		done  
+    else
+    	cp /assets/config/$CONFIGFILE /gcds/gcds_conf.xml
+	fi
+
+### Clean up old sync.lock if existing
+    rm -rf /root/syncState/*.lock
+
+DATE=(`date "+%Y%m%d-%H%M%S"`)
+FILENAME=$DATE-$LOGFILE
+
+		if [ $DRY_RUN  = "TRUE" ];  then 
+			echo '** [gcds] Starting a Dry Run.. Please Change DRY_RUN to FALSE in docker-compose.yml to commit changes..'
+            /gcds/sync-cmd -V
+		    /gcds/sync-cmd -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c /gcds/gcds_conf.xml -o $FLUSH_ARG
+		else
+			echo '** [gcds] Starting Live Run..'
+		    /gcds/sync-cmd -a -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c /gcds/gcds_conf.xml -o $FLUSH_ARG > /tmp/$FILENAME 2>/tmp/$FILENAME
+			
+			if [ ! -s "/var/log/gcds/$FILENAME" ] ; then
+			    rm -rf /var/log/gcds/$FILENAME;
+			fi
+
+			if grep '[ERROR] [usersyncapp.sync.ConfigErrorHandler]' /tmp/$FILENAME ; then
+				/usr/local/bin/rocketchat-alert "#it-systems" "*Synchronization Failed*" "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with the OAUTH key. See the file */tmp/$FILENAME.error* for hints.\n "  "gcds-app"
+				mv /tmp/$FILENAME /tmp/$FILENAME.error
+			fi
+
+			if grep '"LDAP Plugin" threw a fatal exception' /tmp/$FILENAME ; then
+				/usr/local/bin/rocketchat-alert "#it-systems" "*Synchronization Failed*" "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with improper LDAP Hostname, or Credentials. See the file */tmp/$FILENAME.error* for hints.\n "  "gcds-app"
+				mv /tmp/$FILENAME /tmp/$FILENAME.error
+			fi
+
+		#rm -rf /tmp/$FILENAME
+
+            echo "$CRON_EXP" '/gcds/cron.sh >/dev/null 2>&1 '>>/assets/cron/crontab.txt
+            echo '0 * * * * /gcds/cleanup.sh >/dev/null 2>&1 '>>/assets/cron/crontab.txt 
+	    	/usr/bin/crontab /assets/cron/crontab.txt
+		fi
+
+
+echo '**** [gcds] The container is now running silently in the background. Please review the log files in or outside of the container!'
+
+exit 0

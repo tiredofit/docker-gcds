@@ -1,0 +1,15 @@
+#!/bin/bash
+
+url='https://talk.example.org/hooks/fillin'
+username='GCDS'
+
+to="$1"
+subject="$2"
+
+emoji=':warning:'
+
+message="${subject}:\n$3 \nService: $4"
+
+payload="payload={\"channel\": \"${to//\"/\\\"}\", \"username\": \"${username//\"/\\\"}\", \"text\": \"${message//\"/\\\"}\", \"icon_emoji\": \"${emoji}\"}"
+/usr/bin/curl -m 5 --data-urlencode "${payload}" $url
+

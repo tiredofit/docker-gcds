@@ -1,6 +1,60 @@
-## 3.1 2017-11-13 <dave at tiredofit dot ca>
+## 4.0 2018-07-24 <dave at tiredofit dot ca>
 
-* Added SMTP_HOST, SMTP_RCPT, SMTP_FROM, SMTP_PORT variables to send email when GCDS needs reauthorizing.
+* Utilize new method to save state for Encryption Keys allowing for easy start and stops only requiring reauthorization if a new 
+configuration file is used.
+* Fix Log Cleanup Script
+
+## 3.56 2018-01-22 <dave at tiredofit dot ca>
+
+* Rip out Logrotate and add gzipping to cleanup.sh and delete files older than 7 days from /var/log/gcds
+
+## 3.55 2018-01-21 <dave at tiredofit dot ca>
+
+* Use FILENAME var instead of hardcoded log file entry fix
+
+## 3.54 2018-01-21 <dave at tiredofit dot ca>
+
+* Logrotate.d
+
+## 3.53 2018-01-21 <dave at tiredofit dot ca>
+
+* Actually make the sync start :P
+
+## 3.52 2018-01-19 <dave at tiredofit dot ca>
+
+* Automatically reset lockfile after 30 minutes for self healing
+
+## 3.51 2018-01-19 <dave at tiredofit dot ca>
+
+* Be more descriptive on types of errors
+
+## 3.5 2018-01-19 <dave at tiredofit dot ca>
+
+* Clean Syncstate lock file upon bootup
+* Add error trapping to send Rocketchat Alerts if Oauth Missing
+* Add error trapping to send Rocketchat alerts if fatal error occurs
+* Cleanup any 0 byte logfiles
+* Fix Logrotate and Merged Hourly files (extension `.logs`)
+
+## 3.4 2018-01-03 <dave at tiredofit dot ca>
+
+* Set to Run as gcds user NOT root
+* Try for some data persistence
+
+## 3.3 2018-01-03 <dave at tiredofit dot ca>
+
+* Fix Logging to create a new logfile upon each run
+
+## 3.2 2018-01-03 <dave at tiredofit dot ca>
+
+* Fix Logrotate Issues
+* Update MailX
+
+## 3.1 2018-01-03 <dave at tiredofit dot ca>
+
+* Switch to Debian:stretch
+* Add ENV VARS (SMTP_HOST, SMTP_PORT, MAIL_FROM, MAIL_TO, DOMAIN
+* Cleaned up Crontab 
 
 ## 3.0 2017-08-27 <dave at tiredofit dot ca>
 

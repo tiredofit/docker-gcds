@@ -7,13 +7,14 @@ services:
     volumes:
     - ./logs:/var/log/gcds
     - ./config:/assets/config
-    - /etc/localtime:/etc/localtime:ro
     environment:
     - DRY_RUN=TRUE
+    - DOMAIN=example.com
     - LOG_LEVEL=ERROR
-    - CONFIGGILE=config.xml
+    - CONFIGFILE=config.xml
     - LOGFILE=gcds-sync.log
     - ZABBIX_HOSTNAME=gcds-app
+    - FORCED_AUTH=FALSE
     networks:
       - proxy-tier
     restart: always
