@@ -9,12 +9,18 @@ services:
     - ./config:/assets/config
     environment:
     - DRY_RUN=TRUE
-    - DOMAIN=example.com
-    - LOG_LEVEL=ERROR
     - CONFIGFILE=config.xml
+    - DOMAIN=example.com
+    - LDAP_PASS=password
+    - LOG_LEVEL=ERROR
     - LOGFILE=gcds-sync.log
+    - MAIL_FROM=gcds@example.com
+    - MAIL_TO=gcds@example.com
+    - SMTP_HOST=smtp.example.com
+    - SMTP_PORT=25
+    - WEBHOOK_URL=https://example.com/webhook/12345678
+    - WEBHOOK_CHANNEL=#general
     - ZABBIX_HOSTNAME=gcds-app
-    - FORCED_AUTH=FALSE
     networks:
       - proxy-tier
     restart: always

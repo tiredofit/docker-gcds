@@ -1,3 +1,17 @@
+## 4.2 2018-07-31 <dave at tiredofit dot ca>
+
+* Added ability to enable / disable email notifications and webhook notifications
+* Customizable Webhook URL and endpoint
+* Add some defaults for Cron execution
+* Update Documentation
+
+## 4.1 2018-07-30 <dave at tiredofit dot ca>
+
+* Updated Routines for configuration files to delete old OAuth keys
+* Added routine to change hostname in configuration files
+* Added routine to update log level in configuration file
+* Added routine to change MAIL_FROM MAIL_TO and SMTP_HOST inside configuration
+
 ## 4.0 2018-07-24 <dave at tiredofit dot ca>
 
 * Utilize new method to save state for Encryption Keys allowing for easy start and stops only requiring reauthorization if a new 

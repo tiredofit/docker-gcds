@@ -1,21 +1,19 @@
-# hub.docker.com/tiredofit/gcds
+# hub.docker.com/r/tiredofit/gcds
 
-[![Build Status](https://img.shields.io/docker/build/tiredofit/fusiondirectory.svg)](https://hub.docker.com/r/tiredofit/fusiondirectory)
-[![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/fusiondirectory.svg)](https://hub.docker.com/r/tiredofit/fusiondirectory)
-[![Docker Stars](https://img.shields.io/docker/stars/tiredofit/fusiondirectory.svg)](https://hub.docker.com/r/tiredofit/fusiondirectory)
-[![Docker 
-Layers](https://images.microbadger.com/badges/image/tiredofit/fusiondirectory.svg)](https://microbadger.com/images/tiredofit/fusiondirectory)
+[![Build Status](https://img.shields.io/docker/build/tiredofit/gcds.svg)](https://hub.docker.com/r/tiredofit/gcds)
+[![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/gcds.svg)](https://hub.docker.com/r/tiredofit/gcds)
+[![Docker Stars](https://img.shields.io/docker/stars/tiredofit/gcds.svg)](https://hub.docker.com/r/tiredofit/gcds)
+[![Docker Layers](https://images.microbadger.com/badges/image/tiredofit/gcds.svg)](https://microbadger.com/images/tiredofit/gcds)
 
 # Introduction
 
 This will build a container for Google Cloud Directory Sync (old name GADS)
 
 *    Downloads Latest Release from Google
-*    Persists Oauth between restarts
-    
+
 This image needs manual configuration to get configuration running, it is not dynamic! It also needs work for automated execution, so be careful and setup monitoring should it fail. You will need to manually create the configuration file via the GCDS Desktop tools and place it inside the container via mapping to `/assets/config`. 
 
-This Container uses tiredofit/debian:16.04 as a base w/S6 Init System and Zabbix Monitoring.
+This Container uses tiredofit/debian:stretch as a base.
 
 [Changelog](CHANGELOG.md)
 
@@ -45,22 +43,22 @@ None
 
 # Installation
 
-Automated builds of the image are available on [Registry](https://hub.docker.com/tiredofit/gcds) and is the recommended method of installation.
+Automated builds of the image are available on [Registry](https://hub.docker.com/r/tiredofit/gcds) and is the recommended method of installation.
 
 
 ```bash
-docker pull hub.docker.com/tiredofit/gcds
+docker pull tiredofit/gcds
 ```
 
 # Quick Start
 
 * The quickest way to get started is using [docker-compose](https://docs.docker.com/compose/). See the examples folder for a working [docker-compose.yml](examples/docker-compose.yml) that can be modified for development or production use.
 
+* Configure your GCDS using a workstation and save the XML file. 
+* Set environment variables and make sure you set your LDAP password so that it can be reencrypted.
+
 You must start the container, and then manually verify the OAUTH information via a browser in order for synchronziation to start.
 
-There is scripting to support sending to a webhook based receiver like Rocketchat or Slack when errors occur, also the ability to recieve emails upon first configuration. This is a sanitized version of a production image and you will need to modify accordingly.
-
-If the configuration filename changes between restarts of containers you will need to go through the authorization again. If for some reason it still isn't working you can set the `FORCED_AUTH` environment variable to start all over again.
 
 # Configuration
 
@@ -70,8 +68,9 @@ The following directories are used for configuration and can be mapped for persi
 
 | Directory | Description |
 |-----------|-------------|
-| `/var/log/gcds` | GCDS Log Output Directory |
 | `/assets/config` | Map this directory and place your GCDS .xml file here.
+| `/var/log/gcds` | GCDS Log Output Directory |
+
 
 ### Environment Variables
 
@@ -82,11 +81,22 @@ Along with the Environment Variables from the [Base image](https://hub.docker.co
 | Parameter | Description |
 |-----------|-------------|
 | `CONFIG_FILE | The name of your GCDS configuration file (e.g. `gcds-conf.xml`)
-| `DRY_RUN` | Execute a Dry Run Test (e.g. `TRUE` / `FALSE` Default: TRUE) |
-| `FORCED_AUTH` | Force reauthentication again (e.g. `TRUE` / `FALSE` Default: `FALSE` ) |
+| `DOMAIN` | The Domain in question that is being synced |
+| `DRY_RUN` | Execute a Dry Run Test (e.g. `TRUE` / `FALSE` Default: `TRUE`) |
+| `ENABLE_EMAIL_NOTIFICATIONS` | Enable Email Notifications when Container errors occur `TRUE`/`FALSE` Default: `TRUE`
+| `ENABLE_WEBHOOK_NOTIFICATIONS` | Enable Webhook Notifications when Container errors occur `TRUE`/`FALSE` Default: `TRUE`
+| `FLUSH` | Enable Flushing of Data after Sync `TRUE`/`FALSE` Default: `FALSE` 
+| `FORCE_AUTH` | Force reauthentication again (e.g. `TRUE` / `FALSE` Default: `FALSE` ) |
+| `LDAP_PASS` | Password of your LDAP Account for reencryption |
 | `LOG_LEVEL` | GCDS Error Logging level (e.g. `ERROR`) |
 | `LOG_FILE` | Name of Logfile to output (Default `sync.log`) |
-| `FLUSH` | Enable Flushing of Data afte rSync |
+| `MAIL_FROM` | What email address to send mail from for errors |
+| `MAIL_TO` | What email address to send mail to for errors |
+| `SMTP_HOST` | What SMTP server to use for sending mail |
+| `SMTP_PORT` | What SMTP port to use for sending mail - Default `25` |
+| `WEBHOOK_URL` | Full URL to send webhook notifications to |
+| `WEBHOOK_CHANNEL` | Channel or User to send Webhook notifications to |
+| `WEBHOOK_CHANNEL_ESCALATED` | Channel or User to send Webhook after repeat errors |
 
 
 # Maintenance

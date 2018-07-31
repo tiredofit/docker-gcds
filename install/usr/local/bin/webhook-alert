@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/with-contenv bash
 
-url='https://talk.example.org/hooks/fillin'
+url=$WEBHOOK_URL
 username='GCDS'
 
 to="$1"
