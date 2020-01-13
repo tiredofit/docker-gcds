@@ -1,22 +1,7 @@
-#!/usr/bin/with-contenv bash
+for s in /assets/functions/*; do source $s; done
+PROCESS_NAME="gcds"
 
-if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ];  then
-  set -x
-fi
-
-DATE=(`date "+%Y%m%d-%H%M%S"`)
-FILENAME=$DATE-$LOGFILE
-GCDS_XML_FILE=/gcds/gcds_conf.xml
-MAIL_FROM=${MAIL_FROM:-"gcds@example.com"}
-MAIL_TO=${MAIL_TO:-"admin@example.com"}
-SMTP_HOST=${SMTP_HOST-"postfix-relay"}
-SMTP_PORT=${SMTP_PORT:-"25"}
-ENABLE_EMAIL_NOTIFICATIONS=${ENABLE_EMAIL_NOTIFICATIONS:-TRUE}
-ENABLE_WEBHOOK_NOTIFICATIONS=${ENABLE_WEBHOOK_NOTIFICATIONS:-TRUE}
-WEBHOOK_CHANNEL=${WEBHOOK_CHANNEL:-"#it-systems"}
-WEBHOOK_CHANNEL_ESCALATED=${WEBHOOK_CHANNEL:-$WEBHOOK_CHANNEL}
-
-/gcds/sync-cmd -a -l ERROR -r /var/log/gcds/$FILENAME -c $GCDS_XML_FILE -o
+/gcds/sync-cmd -a -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c $GCDS_XML_FILE -o
 
 if ls /assets/config/.syncState/*.lock >/dev/null 2>&1; then
 LOCKFILE=`ls -C /assets/config/.SyncState/*.lock | sed "s~/assets/config/.syncState/~~g"`

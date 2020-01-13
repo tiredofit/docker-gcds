@@ -13,7 +13,7 @@ This will build a container for Google Cloud Directory Sync (old name GADS)
 
 This image needs manual configuration to get configuration running, it is not dynamic! It also needs work for automated execution, so be careful and setup monitoring should it fail. You will need to manually create the configuration file via the GCDS Desktop tools and place it inside the container via mapping to `/assets/config`. 
 
-This Container uses tiredofit/debian:stretch as a base.
+This Container uses tiredofit/debian:buster as a base.
 
 [Changelog](CHANGELOG.md)
 

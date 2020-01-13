@@ -1,6 +1,6 @@
-version: '2'
-
+version: '3.7'
 services:
+  
   gcds-app:
     image: tiredofit/gcds:latest
     container_name: gcds-app
@@ -22,11 +22,13 @@ services:
     - WEBHOOK_CHANNEL=#general
     - ZABBIX_HOSTNAME=gcds-app
     networks:
-      - proxy-tier
+    - internal
+    - services
     restart: always
 
 networks:
-  proxy-tier:
-    external:
-      name: nginx-proxy
+  internal:
+    external: false
+  services:
+    external: true
 

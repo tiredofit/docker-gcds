@@ -1,3 +1,14 @@
+## 4.4.0 2020-01-12 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update to support new tiredofit/debian base image
+      - Debian Buster
+
+
+## 4.3 2018-08-24 <dave at tiredofit dot ca>
+
+* Fix LOG_LEVEL to work other than ERROR
+
 ## 4.2 2018-07-31 <dave at tiredofit dot ca>
 
 * Added ability to enable / disable email notifications and webhook notifications
