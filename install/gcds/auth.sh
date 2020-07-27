@@ -1,4 +1,6 @@
 #!/usr/bin/with-contenv bash
+source /assets/functions/00-container
+source /assets/defaults/10-gcds
 
 GCDS_XML_FILE=/gcds/gcds_conf.xml
 

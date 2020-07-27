@@ -5,9 +5,9 @@ LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 ENV DOMAIN=example.com
 
 RUN set -x && \
-    \
 ### Dependencies Package Install
-    apt-get -y update && \
+    apt-get update && \
+    #apt-get -y upgrade && \
      LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes --no-install-recommends \
         ca-certificates \
         expect \

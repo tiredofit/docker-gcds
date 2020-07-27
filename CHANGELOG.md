@@ -1,3 +1,21 @@
+## 4.5.2 2020-07-27 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Logfile Generation Fix
+
+
+## 4.5.1 2020-07-27 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Additional Fixes to support pulling defaults and environment variables to scripts
+
+
+## 4.5.0 2020-06-09 <dave at tiredofit dot ca>
+
+   ### Added
+      - Update to support new tiredofit/debian 5.0.0 Base image
+
+
 ## 4.4.0 2020-01-12 <dave at tiredofit dot ca>
 
    ### Added

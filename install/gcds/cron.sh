@@ -1,12 +1,17 @@
-for s in /assets/functions/*; do source $s; done
+source /assets/functions/00-container
+source /assets/defaults/10-gcds
 PROCESS_NAME="gcds"
+
+DATE=(`date "+%Y%m%d-%H%M%S"`)
+FILENAME=$DATE-$LOGFILE
+
 
 /gcds/sync-cmd -a -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c $GCDS_XML_FILE -o
 
 if ls /assets/config/.syncState/*.lock >/dev/null 2>&1; then
 LOCKFILE=`ls -C /assets/config/.SyncState/*.lock | sed "s~/assets/config/.syncState/~~g"`
 
-	if [ `stat --format=%Y /assets/config/.syncState/$LOCKFILE` -le $(( `date +%s` - 1800 )) ]; then 
+	if [ `stat --format=%Y /assets/config/.syncState/$LOCKFILE` -le $(( `date +%s` - 1800 )) ]; then
 		if [ "$ENABLE_WEBHOOK_NOTIFICATIONS" = "TRUE" ] || [ "$ENABLE_WEBHOOK_NOTIFICATIONS" = "true" ];  then
 			/usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*Lockfile Issue*" "The Google Cloud Directory Sync seems to be hung due to a stale lockfile. I've deleted it, however this was after 30 minutes of hanging. Please monitor the container for any further issues.\n "  "gcds-app"\;
 		fi
@@ -16,7 +21,7 @@ LOCKFILE=`ls -C /assets/config/.SyncState/*.lock | sed "s~/assets/config/.syncSt
 			      -s "[GCDS] Lockfile Issue" \
 			      -S smtp="$SMTP_HOST:$SMTP_PORT" \
 			      $MAIL_TO & >/dev/null 2>&1
-		fi	
+		fi
 		rm -rf  /assets/config/.syncState/$LOCKFILE
 	fi
 fi;

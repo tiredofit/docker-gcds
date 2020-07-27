@@ -1,5 +1,7 @@
 #!/usr/bin/with-contenv bash
-set -x
+source /assets/functions/00-container
+source /assets/defaults/10-gcds
+
 cd /var/log/gcds
 DATEH=(`date -d "1 hour ago" +%Y%m%d-%H`)
 DATE=(`date -d "1 hour ago" +%Y%m%d`)

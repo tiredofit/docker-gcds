@@ -1,5 +1,11 @@
-for s in /assets/functions/*; do source $s; done
+#!/usr/bin/with-contenv bash
+
+source /assets/functions/00-container
+prepare_service
 PROCESS_NAME="gcds"
+
+DATE=(`date "+%Y%m%d-%H%M%S"`)
+FILENAME=$DATE-$LOGFILE
 
 modify_configuration(){
   sed -i "s/$(echo $1 | sed -e 's/\([[\/.*]\|\]\)/\\&/g')/$(echo $2 | sed -e 's/[\/&]/\\&/g')/g" $3
@@ -12,7 +18,7 @@ if [ ! -d /assets/config/.java ]; then
     cp -R /assets/.java /assets/config/
 fi
 
-mkdir -p /assets/config/.SyncState 
+mkdir -p /assets/config/.SyncState
 ln -s /assets/config/.java /root/.java
 ln -s /assets/config/.SyncState /root/syncState
 
@@ -25,18 +31,18 @@ fi
 print_notice "Starting Google Cloud Directory Configuration"
 
 ## Argument Check
-if [ $FLUSH = "TRUE" ];  then
+if var_true $FLUSH ; then
 	FLUSH_ARG=--flush
 else
 	FLUSH_ARG=
 fi
 
-if [ "$FORCE_AUTH" = "FALSE" ] || [ "$FORCE_AUTH" = "false" ];  then
-  	AUTHORIZED_CONFIG=`cat /assets/config/AUTHORIZED_CONFIG`
+if var_true $FORCE_AUTH ; then
+  	AUTHORIZED_CONFIG=$(cat /assets/config/AUTHORIZED_CONFIG)
 else
 	rm -rf /assets/config/AUTHORIZED_CONFIG
 fi
-    
+
 if [ "$AUTHORIZED_CONFIG" != "$CONFIGFILE" ]; then
 	print_notice "Detected a new configuration file. Resetting Encryption Key"
 
@@ -94,16 +100,16 @@ EOD
 	counter=1
 	while ! [ -f /gcds/oauthorized ];
 	do
-	    print_info "***"
-	    print_info "*** CONTAINER NOT FULLY OPERATIONAL"
-	    print_info "*** You must enter this container and complete the OAUTH2 Manual Verification!"
-	    print_info "***"
-	    print_info "*** 'docker exec -it (container-name) bash'"
-	    print_info "*** 'sh auth.sh'"
-	    print_info "***"
-	    print_info "***"
+	    print_notice "***"
+	    print_notice "*** CONTAINER NOT FULLY OPERATIONAL"
+	    print_notice "*** You must enter this container and complete the OAUTH2 Manual Verification!"
+	    print_notice "***"
+	    print_notice "*** 'docker exec -it (container-name) bash'"
+	    print_notice "*** 'sh auth.sh'"
+	    print_notice "***"
+	    print_notice "***"
 
-	if [ "$ENABLE_EMAIL_NOTIFICATIONS" = "TRUE" ] || [ "$ENABLE_EMAIL_NOTIFICATIONS" = "true" ];  then
+	if var_true $ENABLE_EMAIL_NOTIFICATIONS ; then
 		    echo "The GCDS Docker Container has recently started and needs to have additional steps completed in order for the GoogleCloudDirectorySync Service to continue. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script." | s-nail -v \
 		      -r "$MAIL_FROM" \
 		      -s "[GCDS] OAUTH2 Authorization Required!" \
@@ -111,22 +117,22 @@ EOD
 		      $MAIL_TO & >/dev/null 2>&1
 	fi
 
-	if [ "$ENABLE_WEBHOOK_NOTIFICATIONS" = "TRUE" ] || [ "$ENABLE_WEBHOOK_NOTIFICATIONS" = "true" ];  then
+	if var_true $ENABLE_WEBHOOK_NOTIFICATIONS ; then
 		    counter=$((counter +1 ))
 		    /usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*OAUTH required*" "Google Cloud Directory Sync service has just restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n "  "gcds-app"
 
 	        if [ $counter = "15" ] ; then
-	        	/usr/local/bin/webhook-alert $WEBHOOK_CHANNEL_ESCALATED "*Google Cloud Directory Sync Service Down!*" "Please alert Sysadmins - The Google Cloud Directory Sync service has restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n Any synchronizing of LDAP accounts to Google will fail until this is completed!\n"  "gcds-app"        		    
+	        	/usr/local/bin/webhook-alert $WEBHOOK_CHANNEL_ESCALATED "*Google Cloud Directory Sync Service Down!*" "Please alert Sysadmins - The Google Cloud Directory Sync service has restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n Any synchronizing of LDAP accounts to Google will fail until this is completed!\n"  "gcds-app"
 	        	counter=1
 	        fi
 	fi
 	    sleep 120
-	done  
+	done
 else
 	cp /assets/config/$CONFIGFILE $GCDS_XML_FILE
 fi
 
-### Update SMTP Host 
+### Update SMTP Host
 GCDS_XML_PATH="/config/notification/smtpRelay"
 GCDS_NEW_VALUE="<smtpRelay>$SMTP_HOST</smtpRelay>"
 GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
@@ -138,7 +144,7 @@ GCDS_NEW_VALUE="<fromAddress>$MAIL_FROM</fromAddress>"
 GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
 modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
 
-### Update SMTP To address 
+### Update SMTP To address
 GCDS_XML_PATH="/config/notification/toAddress"
 GCDS_NEW_VALUE="<toAddress>$MAIL_TO</toAddress>"
 GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
@@ -150,14 +156,14 @@ rm -rf /root/syncState/*.lock
 DATE=(`date "+%Y%m%d-%H%M%S"`)
 FILENAME=$DATE-$LOGFILE
 
-if [ $DRY_RUN  = "TRUE" ];  then 
+if var_true $DRY_RUN ; then
 	print_info "Starting a Dry Run.. Please Change DRY_RUN to FALSE in docker-compose.yml to commit changes.."
     /gcds/sync-cmd -V
     /gcds/sync-cmd -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c /gcds/gcds_conf.xml -o $FLUSH_ARG
 else
 	print_info "Starting Live Run.."
     /gcds/sync-cmd -a -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c /gcds/gcds_conf.xml -o $FLUSH_ARG > /tmp/$FILENAME 2>/tmp/$FILENAME
-	
+
 	if [ ! -s "/var/log/gcds/$FILENAME" ] ; then
 	    rm -rf /var/log/gcds/$FILENAME;
 	fi
@@ -175,7 +181,7 @@ else
 rm -rf /tmp/$FILENAME
 
     echo "$CRON_EXP" '/gcds/cron.sh >/dev/null 2>&1 '>>/assets/cron/crontab.txt
-    echo '0 * * * * /gcds/cleanup.sh >/dev/null 2>&1 '>>/assets/cron/crontab.txt 
+    echo '0 * * * * /gcds/cleanup.sh >/dev/null 2>&1 '>>/assets/cron/crontab.txt
 	/usr/bin/crontab /assets/cron/crontab.txt
 fi
 
