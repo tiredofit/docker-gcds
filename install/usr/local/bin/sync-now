@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/etc/services.available/10-gcds/run NOW

@@ -4,26 +4,28 @@ source /assets/functions/00-container
 prepare_service
 PROCESS_NAME="gcds"
 
-DATE=(`date "+%Y%m%d-%H%M%S"`)
-FILENAME=$DATE-$LOGFILE
-
-modify_configuration(){
-  sed -i "s/$(echo $1 | sed -e 's/\([[\/.*]\|\]\)/\\&/g')/$(echo $2 | sed -e 's/[\/&]/\\&/g')/g" $3
-}
-
 ## Sanity Check
-mkdir -p /var/log/gcds
+print_debug "Making log dir"
+mkdir -p "${LOG_PATH}"
 
-if [ ! -d /assets/config/.java ]; then
-    cp -R /assets/.java /assets/config/
+print_debug "Adding cleanup script to cron"
+echo "0 * * * * /gcds/cleanup.sh >/dev/null 2>&1 " >>/assets/cron/crontab.txt
+/usr/bin/crontab /assets/cron/crontab.txt
+
+
+if [ ! -d "/assets/config/.java" ]; then
+    print_debug "Copying Java State to container"
+	cp -R /assets/.java /assets/config/
 fi
 
+print_debug "Creating Sync State folders and linking previous Java State"
 mkdir -p /assets/config/.SyncState
 ln -s /assets/config/.java /root/.java
 ln -s /assets/config/.SyncState /root/syncState
 
-if [ ! -f /assets/config/$CONFIGFILE ]; then
-    print_error "No Configuration File Template Found.. Exiting.."
+print_debug "Checking for Configuration file"
+if [ ! -f /assets/config/$CONFIG_FILE ]; then
+    print_error "No Configuration File Template Found. Exiting.."
     exit 1
 fi
 
@@ -31,72 +33,79 @@ fi
 print_notice "Starting Google Cloud Directory Configuration"
 
 ## Argument Check
+print_debug "Checking if we are going to flush the cache"
 if var_true $FLUSH ; then
-	FLUSH_ARG=--flush
+	flush_arg="--flush"
 else
-	FLUSH_ARG=
+	flush_arg=
 fi
 
+print_debug "Checking to enable Force AUTH"
 if var_true $FORCE_AUTH ; then
-  	AUTHORIZED_CONFIG=$(cat /assets/config/AUTHORIZED_CONFIG)
-else
+	print_debug "Deleting /assets/config/AUTHORIZED_CONFIG"
 	rm -rf /assets/config/AUTHORIZED_CONFIG
+else
+    print_debug "Populating AUTHORIZED_CONFIG value"
+  	AUTHORIZED_CONFIG=$(cat /assets/config/AUTHORIZED_CONFIG)
 fi
 
-if [ "$AUTHORIZED_CONFIG" != "$CONFIGFILE" ]; then
+print_debug "Checking state of config file whether old vs new"
+if [ "$AUTHORIZED_CONFIG" != "$CONFIG_FILE" ]; then
 	print_notice "Detected a new configuration file. Resetting Encryption Key"
+	sanity_var LDAP_PASS "LDAP Password"
 
-sanity_var LDAP_PASS "LDAP Password"
-
+print_debug "Create Encrypted Password Routines"
+expect_log=$(mktemp)
 ## Create Encrypted Password Routines
-/usr/bin/expect <<EOD
-log_file /tmp/expect.log
-spawn /gcds/encrypt-util -c /assets/config/$CONFIGFILE
+	/usr/bin/expect <<EOD
+log_file ${expect_log}
+spawn /gcds/encrypt-util -c /assets/config/$CONFIG_FILE
 expect ":"
 send $LDAP_PASS\r
 interact
 expect close
 EOD
 
-	tail -n +4 /tmp/expect.log > /tmp/sanitized
-	sed -i -e "s/Encrypted value (case sensitive, please cut and paste): //g" /tmp/sanitized
+	gcds_encrypted_pass=$(grep "Encrypted value" ${expect_log} | awk '{print $9}')
+	rm -rf ${expect_log}
 
-	## Parse the output
-	GCDS_ENCRYPTED_PASS=$(sed -n '3p' /tmp/sanitized)
-	GCDS_ENCRYPTED_PASS=$(echo $GCDS_ENCRYPTED_PASS|tr -d '\040\011\012\015')
-	GCDS_ENCRYPTED_PASS=${GCDS_ENCRYPTED_PASS:1:${#GCDS_ENCRYPTED_PASS}}
-	rm -rf /tmp/expect.log /tmp/sanitized
+	print_debug "Copy Config file into running configuration file"
+	cp /assets/config/$CONFIG_FILE $GCDS_XML_FILE
 
-	cp /assets/config/$CONFIGFILE $GCDS_XML_FILE
-
-    ### Delete old OAuth Token
-	sed -i '/<oAuth2RefreshToken>.*<\/oAuth2RefreshToken>/d' $GCDS_XML_FILE
+	### Delete old OAuth Token
+	print_debug "Delete Oauth Token"
+	sed -i "/<oAuth2RefreshToken>.*<\/oAuth2RefreshToken>/d" $GCDS_XML_FILE
 
 	### Update LDAP Credentials
-	GCDS_XML_PATH="//config/plugins/local/plugin/config/authCredentialsEncrypted"
-	GCDS_NEW_VALUE="<authCredentialsEncrypted>$GCDS_ENCRYPTED_PASS</authCredentialsEncrypted>"
-	GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
-	modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
+	print_debug "Update LDAP Credentials"
+	gcds_xml_path="//config/plugins/local/plugin/config/authCredentialsEncrypted"
+	gcds_new_value="<authCredentialsEncrypted>$gcds_encrypted_pass</authCredentialsEncrypted>"
+	gcds_old_value=$(echo "cat $gcds_xml_path" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+	modify_configuration $gcds_old_value $gcds_new_value $GCDS_XML_FILE
 
-    ### Update Oauth Machine Host information
-	GCDS_XML_PATH="/config/plugins/plugin[1]/config/googleCredMachineName"
-	GCDS_NEW_VALUE="<googleCredMachineName>$HOSTNAME</googleCredMachineName>"
-	GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
-	modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
+	### Update Oauth Machine Host information
+	print_debug "Update OAUTH Machine Host Information"
+	gcds_xml_path="/config/plugins/plugin[1]/config/googleCredMachineName"
+	gcds_new_value="<googleCredMachineName>$HOSTNAME</googleCredMachineName>"
+	gcds_old_value=$(echo "cat $gcds_xml_path" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+	modify_configuration $gcds_old_value $gcds_new_value $GCDS_XML_FILE
 
     ### Update LDAP Machine Host information
-	GCDS_XML_PATH="/config/plugins/plugin[2]/config/ldapCredMachineName"
-	GCDS_NEW_VALUE="<ldapCredMachineName>$HOSTNAME</ldapCredMachineName>"
-	GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
-	modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
+	print_debug "Update LDAP Machine Host Information"
+	gcds_xml_path="/config/plugins/plugin[2]/config/ldapCredMachineName"
+	gcds_new_value="<ldapCredMachineName>$HOSTNAME</ldapCredMachineName>"
+	gcds_old_value=$(echo "cat $gcds_xml_path" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+	modify_configuration $gcds_old_value $gcds_new_value $GCDS_XML_FILE
 
     ### Update Log Level information
-	GCDS_XML_PATH="/config/logging/defaultLogLevel"
-	GCDS_NEW_VALUE="<defaultLogLevel>$LOG_LEVEL</defaultLogLevel>"
-	GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
-	modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
+	print_debug "Update Log Level"
+	gcds_xml_path="/config/logging/defaultLogLevel"
+	gcds_new_value="<defaultLogLevel>$LOG_LEVEL</defaultLogLevel>"
+	gcds_old_value=$(echo "cat $gcds_xml_path" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+	modify_configuration $gcds_old_value $gcds_new_value $GCDS_XML_FILE
 
 	## Go in endless loop until auth file exists
+	print_debug "Checking to ensure authorization exists"
 	counter=1
 	while ! [ -f /gcds/oauthorized ];
 	do
@@ -110,7 +119,8 @@ EOD
 	    print_notice "***"
 
 	if var_true $ENABLE_EMAIL_NOTIFICATIONS ; then
-		    echo "The GCDS Docker Container has recently started and needs to have additional steps completed in order for the GoogleCloudDirectorySync Service to continue. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script." | s-nail -v \
+		    print_debug "Sending Email notification"
+			echo "The GCDS Docker Container has recently started and needs to have additional steps completed in order for the GoogleCloudDirectorySync Service to continue. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script." | s-nail -v \
 		      -r "$MAIL_FROM" \
 		      -s "[GCDS] OAUTH2 Authorization Required!" \
 		      -S smtp="$SMTP_HOST:$SMTP_PORT" \
@@ -118,74 +128,45 @@ EOD
 	fi
 
 	if var_true $ENABLE_WEBHOOK_NOTIFICATIONS ; then
-		    counter=$((counter +1 ))
-		    /usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*OAUTH required*" "Google Cloud Directory Sync service has just restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n "  "gcds-app"
+		counter=$((counter +1 ))
+		print_debug "Sending Webhook Notification"
+		/usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*OAUTH required*" "Google Cloud Directory Sync service has just restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n "  "gcds-app"
 
-	        if [ $counter = "15" ] ; then
-	        	/usr/local/bin/webhook-alert $WEBHOOK_CHANNEL_ESCALATED "*Google Cloud Directory Sync Service Down!*" "Please alert Sysadmins - The Google Cloud Directory Sync service has restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n Any synchronizing of LDAP accounts to Google will fail until this is completed!\n"  "gcds-app"
-	        	counter=1
-	        fi
+		if [ $counter = "15" ] ; then
+			/usr/local/bin/webhook-alert $WEBHOOK_CHANNEL_ESCALATED "*Google Cloud Directory Sync Service Down!*" "Please alert Sysadmins - The Google Cloud Directory Sync service has restarted and needs to be authorized to work. Please login to the host server, enter the GCDS container and execute the 'auth.sh' script.\n Any synchronizing of LDAP accounts to Google will fail until this is completed!\n"  "gcds-app"
+			counter=1
+		fi
 	fi
 	    sleep 120
 	done
 else
-	cp /assets/config/$CONFIGFILE $GCDS_XML_FILE
+	print_debug "Not generating new configuration, copying existing configuraiton file over to runtime config."
+	cp /assets/config/$CONFIG_FILE $GCDS_XML_FILE
 fi
 
 ### Update SMTP Host
-GCDS_XML_PATH="/config/notification/smtpRelay"
-GCDS_NEW_VALUE="<smtpRelay>$SMTP_HOST</smtpRelay>"
-GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
-modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
+print_debug "Update SMTP Host"
+gcds_xml_path="/config/notification/smtpRelay"
+gcds_new_value="<smtpRelay>${SMTP_HOST}</smtpRelay>"
+gcds_old_value=$(echo "cat $gcds_xml_path" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+modify_configuration $gcds_old_value $gcds_new_value $GCDS_XML_FILE
 
 ### Update SMTP From Address
-GCDS_XML_PATH="/config/notification/fromAddress"
-GCDS_NEW_VALUE="<fromAddress>$MAIL_FROM</fromAddress>"
-GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
-modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
+print_debug "Update SMTP FROM Address"
+gcds_xml_path="/config/notification/fromAddress"
+gcds_new_value="<fromAddress>${MAIL_FROM}</fromAddress>"
+gcds_old_value=$(echo "cat $gcds_xml_path" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+modify_configuration $gcds_old_value $gcds_new_value $GCDS_XML_FILE
 
 ### Update SMTP To address
-GCDS_XML_PATH="/config/notification/toAddress"
-GCDS_NEW_VALUE="<toAddress>$MAIL_TO</toAddress>"
-GCDS_OLD_VALUE=$(echo "cat $GCDS_XML_PATH" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
-modify_configuration $GCDS_OLD_VALUE $GCDS_NEW_VALUE $GCDS_XML_FILE >/dev/null 2&>1
+print_debug "Update SMTP To Address"
+gcds_xml_path="/config/notification/toAddress"
+gcds_new_value="<toAddress>${MAIL_TO}</toAddress>"
+gcds_old_value=$(echo "cat $gcds_xml_path" | xmllint --shell $GCDS_XML_FILE | sed '/^\/ >/d')
+modify_configuration $gcds_old_value $gcds_new_value $GCDS_XML_FILE
 
 ### Clean up old sync.lock if existing
+print_debug "Cleanup any sync lock files"
 rm -rf /root/syncState/*.lock
 
-DATE=(`date "+%Y%m%d-%H%M%S"`)
-FILENAME=$DATE-$LOGFILE
-
-if var_true $DRY_RUN ; then
-	print_info "Starting a Dry Run.. Please Change DRY_RUN to FALSE in docker-compose.yml to commit changes.."
-    /gcds/sync-cmd -V
-    /gcds/sync-cmd -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c /gcds/gcds_conf.xml -o $FLUSH_ARG
-else
-	print_info "Starting Live Run.."
-    /gcds/sync-cmd -a -l $LOG_LEVEL -r /var/log/gcds/$FILENAME -c /gcds/gcds_conf.xml -o $FLUSH_ARG > /tmp/$FILENAME 2>/tmp/$FILENAME
-
-	if [ ! -s "/var/log/gcds/$FILENAME" ] ; then
-	    rm -rf /var/log/gcds/$FILENAME;
-	fi
-
-	if grep '[ERROR] [usersyncapp.sync.ConfigErrorHandler]' /tmp/$FILENAME ; then
-		/usr/local/bin/webhook-alert "${WEBHOOK_CHANNEL}" "*Synchronization Failed*" "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with the OAUTH key. See the file */tmp/$FILENAME.error* for hints.\n "  "gcds-app"
-		mv /tmp/$FILENAME /tmp/$FILENAME.error
-	fi
-
-	if grep '"LDAP Plugin" threw a fatal exception' /tmp/$FILENAME ; then
-		/usr/local/bin/webhook-alert "${WEBHOOK_CHANNEL}" "*Synchronization Failed*" "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with improper LDAP Hostname, or Credentials. See the file */tmp/$FILENAME.error* for hints.\n "  "gcds-app"
-		mv /tmp/$FILENAME /tmp/$FILENAME.error
-	fi
-
-rm -rf /tmp/$FILENAME
-
-    echo "$CRON_EXP" '/gcds/cron.sh >/dev/null 2>&1 '>>/assets/cron/crontab.txt
-    echo '0 * * * * /gcds/cleanup.sh >/dev/null 2>&1 '>>/assets/cron/crontab.txt
-	/usr/bin/crontab /assets/cron/crontab.txt
-fi
-
-print_info "The container is now running silently in the background. Please review the log files in or outside of the container!"
-
 liftoff
-exit 0

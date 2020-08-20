@@ -1,22 +1,19 @@
 FROM tiredofit/debian:buster
 LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
-### Set Environment Variable
-ENV DOMAIN=example.com
-
 RUN set -x && \
-### Dependencies Package Install
+  ### Dependencies Package Install
     apt-get update && \
-    #apt-get -y upgrade && \
-     LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes --no-install-recommends \
-        ca-certificates \
-        expect \
-        libxml2-utils \
-        ldap-utils \
-        python \
-        python-ldap \
-        s-nail \
-        && \
+    apt-get upgrade -y && \
+    LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes --no-install-recommends \
+                  ca-certificates \
+                  expect \
+                  libxml2-utils \
+                  ldap-utils \
+                  python \
+                  python-ldap \
+                  s-nail \
+                  && \
      \
      apt-get clean && \
      rm -rf /var/lib/apt/lists/* && \

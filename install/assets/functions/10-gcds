@@ -1,0 +1,72 @@
+#!/usr/bin/with-contenv bash
+
+check_errors(){
+    if ls /assets/config/.syncState/*.lock >/dev/null 2>&1; then
+        lockfile=`ls -C /assets/config/.SyncState/*.lock | sed "s~/assets/config/.syncState/~~g"`
+
+        if [ $(stat --format=%Y /assets/config/.syncState/$lockfile) -le $(( `date +%s` - 1800 )) ]; then
+            if var_true "${ENABLE_WEBHOOK_NOTIFICATIONS}" ; then
+                /usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*Lockfile Issue*" "The Google Cloud Directory Sync seems to be hung due to a stale lockfile. I've deleted it, however this was after 30 minutes of hanging. Please monitor the container for any further issues.\n "  "gcds-app"\;
+            fi
+            if var_true "${ENABLE_EMAIL_NOTIFICATIONS}" ; then
+                    echo "The Google Cloud Directory Sync seems to be hung due to a stale lockfile. I've deleted it, however this was after 30 minutes of hanging. Please monitor the container for any further issues." | s-nail -v \
+                    -r "$MAIL_FROM" \
+                    -s "[GCDS] Lockfile Issue" \
+                    -S smtp="$SMTP_HOST:$SMTP_PORT" \
+                    $MAIL_TO & > /dev/null 2>&1
+            fi
+            rm -rf  /assets/config/.syncState/$lockfile
+        fi
+    fi
+
+    if [ ! -s "${LOG_PATH}${log_filename}" ] ; then
+        rm -rf ${LOG_PATH}${log_filename};
+    fi
+
+    if grep '[ERROR] [usersyncapp.sync.ConfigErrorHandler]' /tmp/${log_filename} ; then
+        if var_true "${ENABLE_WEBHOOK_NOTIFICATIONS}" ; then
+            /usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*Synchronization Failed*" "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with the OAUTH key. See the file */tmp/${log_filename}.error* for hints.\n "  "gcds-app"
+        fi
+        if var_true "${ENABLE_EMAIL_NOTIFICATIONS}" ; then
+                echo "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with the OAUTH key. See the file */tmp/${log_filename}.error* for hints. " | s-nail -v \
+                -r "$MAIL_FROM" \
+                -s "[GCDS] Synchronization Failed" \
+                -S smtp="$SMTP_HOST:$SMTP_PORT" \
+                $MAIL_TO & >/dev/null 2>&1
+        fi
+        mv /tmp/${log_filename} /tmp/${log_filename}.error
+    fi
+
+    if grep '"LDAP Plugin" threw a fatal exception' /tmp/${log_filename} ; then
+        if var_true "${ENABLE_WEBHOOK_NOTIFICATIONS}" ; then
+            /usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*Synchronization Failed*" "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with improper LDAP Hostname, or Credentials. See the file */tmp/${log_filename}.error* for hints.\n "  "gcds-app"
+        fi
+        if var_true "${ENABLE_EMAIL_NOTIFICATIONS}" ; then
+                echo "The Google Cloud Directory Sync is reporting Fatal Errors. Please login to the host server, enter the GCDS container and troubleshoot. I think it's something to do with improper LDAP Hostname, or Credentials. See the file */tmp/"${log_filename}".error* for hints.\n " | s-nail -v \
+                -r "$MAIL_FROM" \
+                -s "[GCDS] Synchronization Failed" \
+                -S smtp="$SMTP_HOST:$SMTP_PORT" \
+                $MAIL_TO & >/dev/null 2>&1
+        fi
+        mv /tmp/${log_filename} /tmp/${log_filename}.error
+    fi
+
+    rm -rf /tmp/${log_filename}
+}
+
+modify_configuration(){
+    sed -i "s/$(echo $1 | sed -e 's/\([[\/.*]\|\]\)/\\&/g')/$(echo $2 | sed -e 's/[\/&]/\\&/g')/g" $3
+}
+
+perform_sync() {
+    log_date=$(date "+%Y%m%d-%H%M%S")
+    log_filename=$log_date-${LOG_FILE}
+
+    if var_true "${DRY_RUN}" ; then
+        print_notice "Starting Dry Run.. Please Change environment variable \`DRY_RUN=FALSE\` to commit changes to Google"
+        /gcds/sync-cmd -l ${LOG_LEVEL} -r ${LOG_PATH}${log_filename} -c ${GCDS_XML_FILE} -o ${flush_arg} > /tmp/${log_filename} 2>/tmp/${log_filename}
+    else
+        print_notice "Starting Sync Process and comitting changes to Google"
+        /gcds/sync-cmd -a -l ${LOG_LEVEL} -r ${LOG_PATH}${log_filename} -c ${GCDS_XML_FILE} -o ${flush_arg} > /tmp/${log_filename} 2>/tmp/${log_filename}
+    fi
+}

@@ -69,7 +69,7 @@ The following directories are used for configuration and can be mapped for persi
 | Directory        | Description                                            |
 | ---------------- | ------------------------------------------------------ |
 | `/assets/config` | Map this directory and place your GCDS .xml file here. |
-| `/var/log/gcds`  | GCDS Log Output Directory                              |
+| `/logs/`         | GCDS Log Output Directory                              |
 
 
 ### Environment Variables
@@ -77,25 +77,30 @@ The following directories are used for configuration and can be mapped for persi
 Along with the Environment Variables from the [Base image](https://hub.docker.com/r/tiredofit/debian), below is the complete list of available options that can be used to customize your installation.
 
 
-| Parameter                      | Description                                                             | Default    |
-| ------------------------------ | ----------------------------------------------------------------------- | ---------- |
-| `CONFIG_FILE`                  | The name of your GCDS configuration file (e.g. `gcds-conf.xml`)         |            |
-| `DOMAIN`                       | The Domain in question that is being synced                             |            |
-| `DRY_RUN`                      | Execute a Dry Run Test `TRUE` / `FALSE`                                 | `TRUE`     |
-| `ENABLE_EMAIL_NOTIFICATIONS`   | Enable Email Notifications when Container errors occur `TRUE`/`FALSE`   | `TRUE`     |
-| `ENABLE_WEBHOOK_NOTIFICATIONS` | Enable Webhook Notifications when Container errors occur `TRUE`/`FALSE` | `TRUE`     |
-| `FLUSH`                        | Enable Flushing of Data after Sync `TRUE`/`FALSE`                       | `FALSE`    |
-| `FORCE_AUTH`                   | Force reauthentication again `TRUE` / `FALSE`                           | `FALSE`    |
-| `LDAP_PASS`                    | Password of your LDAP Account for reencryption                          |            |
-| `LOG_LEVEL`                    | GCDS Error Logging level (e.g. `ERROR`)                                 | `ERROR`    |
-| `LOG_FILE`                     | Name of Logfile to output                                               | `sync.log` |
-| `MAIL_FROM`                    | What email address to send mail from for errors                         |            |
-| `MAIL_TO`                      | What email address to send mail to for errors                           |            |
-| `SMTP_HOST`                    | What SMTP server to use for sending mail                                |            |
-| `SMTP_PORT`                    | What SMTP port to use for sending mail                                  | `25`       |
-| `WEBHOOK_URL`                  | Full URL to send webhook notifications to                               |            |
-| `WEBHOOK_CHANNEL`              | Channel or User to send Webhook notifications to                        |            |
-| `WEBHOOK_CHANNEL_ESCALATED`    | Channel or User to send Webhook after repeat errors                     |            |
+| Parameter                      | Description                                                                                                                                    | Default    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `CONFIG_FILE`                  | The name of your GCDS configuration file (e.g. `gcds-conf.xml`)                                                                                |            |
+| `DOMAIN`                       | The Domain in question that is being synced                                                                                                    |            |
+| `DRY_RUN`                      | Execute a Dry Run Test `TRUE` / `FALSE`                                                                                                        | `TRUE`     |
+| `ENABLE_EMAIL_NOTIFICATIONS`   | Enable Email Notifications when Container errors occur `TRUE`/`FALSE`                                                                          | `TRUE`     |
+| `ENABLE_WEBHOOK_NOTIFICATIONS` | Enable Webhook Notifications when Container errors occur `TRUE`/`FALSE`                                                                        | `TRUE`     |
+| `FLUSH`                        | Enable Flushing of Data after Sync `TRUE`/`FALSE`                                                                                              | `FALSE`    |
+| `FORCE_AUTH`                   | Force reauthentication again `TRUE` / `FALSE`                                                                                                  | `FALSE`    |
+| `LDAP_PASS`                    | Password of your LDAP Account for reencryption                                                                                                 |            |
+| `LOG_LEVEL`                    | GCDS Error Logging level (e.g. `ERROR`)                                                                                                        | `INFO`     |
+| `LOG_PATH`                     | Path where logs are kept                                                                                                                       | `/logs/`   |
+| `LOG_FILE`                     | Name of Logfile to output                                                                                                                      | `sync.log` |
+| `MAIL_FROM`                    | What email address to send mail from for errors                                                                                                |            |
+| `MAIL_TO`                      | What email address to send mail to for errors                                                                                                  |            |
+| `SMTP_HOST`                    | What SMTP server to use for sending mail                                                                                                       |            |
+| `SMTP_PORT`                    | What SMTP port to use for sending mail                                                                                                         | `25`       |
+| `SYNC_BEGIN`                   | What time to do the first sync. Defaults to immediate. Must be in one of two formats                                                           | `+0`       |
+|                                | Absolute HHMM, e.g. `2330` or `0415`                                                                                                           |
+|                                | Relative +MM, i.e. how many minutes after starting the container, e.g. `+0` (immediate), `+10` (in 10 minutes), or `+90` in an hour and a half |
+| `SYNC_INTERVAL`                | How often to sync, in minutes.                                                                                                                 | `60`       |
+| `WEBHOOK_URL`                  | Full URL to send webhook notifications to                                                                                                      |            |
+| `WEBHOOK_CHANNEL`              | Channel or User to send Webhook notifications to                                                                                               |            |
+| `WEBHOOK_CHANNEL_ESCALATED`    | Channel or User to send Webhook after repeat errors                                                                                            |            |
 
 
 ## Maintenance
@@ -106,6 +111,8 @@ For debugging and maintenance purposes you may want access the containers shell.
 ```bash
 docker exec -it (whatever your container name is e.g. gcds) bash
 ```
+
+To start a sync immediately inside the container - type `sync-now`
 
 ## References
 

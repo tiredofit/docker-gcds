@@ -1,3 +1,16 @@
+## 5.0.0 2020-08-20 <dave at tiredofit dot ca>
+
+   ### Added
+      - Rewrote image for modernization
+      - Changed ways of syncing, now choose when you want it to start and the frequency in minutes
+      - Added new LOG PATH variable
+      - Cleaned up code and moved common things into functions
+      - Force start a sync by entering container and typing `sync-now`
+
+   ### Changed
+      - Changed some variable names (LOG_FILE, CONFIG_FILE)
+      - Fixed a routine with LDAP encrypted password
+
 ## 4.5.3 2020-08-20 <dave at tiredofit dot ca>
 
    ### Changed
@@ -49,7 +62,7 @@
 
 ## 4.0 2018-07-24 <dave at tiredofit dot ca>
 
-* Utilize new method to save state for Encryption Keys allowing for easy start and stops only requiring reauthorization if a new 
+* Utilize new method to save state for Encryption Keys allowing for easy start and stops only requiring reauthorization if a new
 configuration file is used.
 * Fix Log Cleanup Script
 
@@ -103,7 +116,7 @@ configuration file is used.
 
 * Switch to Debian:stretch
 * Add ENV VARS (SMTP_HOST, SMTP_PORT, MAIL_FROM, MAIL_TO, DOMAIN
-* Cleaned up Crontab 
+* Cleaned up Crontab
 
 ## 3.0 2017-08-27 <dave at tiredofit dot ca>
 

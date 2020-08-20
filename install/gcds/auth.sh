@@ -2,28 +2,22 @@
 source /assets/functions/00-container
 source /assets/defaults/10-gcds
 
-GCDS_XML_FILE=/gcds/gcds_conf.xml
-
-echo "**** [gcds] "
+print_notice ""
 echo "*** 		  GOOGLE CLOUD DIR SYNC OAUTH STEP"
 echo "***"
-echo "***         This script will connect to Google's Servers and provide you with a link to visit using your local webbrowser. "
+echo "***         This script will connect to Google's Servers and provide you with a link to visit using your local web browser. "
 echo "***"
 echo "***"
 read -rsp $'Press any key to continue...\n' -n 1 key
-
-if [ "$DEBUG_MODE" = "TRUE" ] || [ "$DEBUG_MODE" = "true" ];  then
-  set -x
-fi
 
 #refreshing GCDS oauth token
 /gcds/upgrade-config -Oauth $DOMAIN -c $GCDS_XML_FILE
 
 #visit resulting URL, copy confirmation code, paste back into prompt
 /gcds/upgrade-config -testgoogleapps -c $GCDS_XML_FILE
-cp /gcds/gcds_conf.xml /assets/config/$CONFIGFILE
-echo $CONFIGFILE > /assets/config/AUTHORIZED_CONFIG
+cp $GCDS_XML_FILE /assets/config/$CONFIG_FILE
+echo $CONFIG_FILE > /assets/config/AUTHORIZED_CONFIG
 
-echo "*** Process Complete, you may now exit the container and it should function normally.."
-date +"   Manual OAUTH2 Authorization Completed on %a %b %e %H:%M:$S %Z %Y" >/gcds/oauthorized
+print_notice "*** Process Complete, you may now exit the containers shell and it should function normally.."
+date +"   Manual OAUTH2 Authorization Completed on %a %b %e %H:%M:%S %Z %Y" >/gcds/oauthorized
 

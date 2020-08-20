@@ -5,16 +5,15 @@ source /assets/defaults/10-gcds
 cd /var/log/gcds
 DATEH=(`date -d "1 hour ago" +%Y%m%d-%H`)
 DATE=(`date -d "1 hour ago" +%Y%m%d`)
-cat /var/log/gcds/${DATEH}*-$LOGFILE > /var/log/gcds/$DATEH-${LOGFILE%.*}.logs
-rm -rf /var/log/gcds/$DATEH*-$LOGFILE
+cat ${LOG_PATH}${DATEH}*-$LOGFILE > ${LOG_PATH}$DATEH-${LOGFILE%.*}.logs
+rm -rf ${LOG_PATH}$DATEH*-$LOGFILE
 
-if [ $DATEH = $DATE"-23" ]; then
-	gzip /var/log/gcds/*.logs
+if [ $DATEH = $DATE"-23" ] ; then
+	gzip ${LOG_PATH}*.logs
 fi
 
-
-if [ ! -s "/var/log/gcds/$DATEH-${LOGFILE$.*}.logs" ] ; then
-    rm -rf /var/log/gcds/$DATEH-${LOGFILE$.*}.logs;
+if [ ! -s "${LOG_PATH}$DATEH-${LOGFILE$.*}.logs" ] ; then
+    rm -rf ${LOG_PATH}$DATEH-${LOGFILE$.*}.logs
 fi
 
-find /var/log/gcds -mtime +7 -type f -delete
+find ${LOG_PATH} -mtime +7 -type f -delete
