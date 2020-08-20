@@ -5,15 +5,15 @@ services:
     image: tiredofit/gcds:latest
     container_name: gcds-app
     volumes:
-    - ./logs:/var/log/gcds
+    - ./logs:/logs/
     - ./config:/assets/config
     environment:
     - DRY_RUN=TRUE
-    - CONFIGFILE=config.xml
+    - CONFIG_FILE=config.xml
     - DOMAIN=example.com
     - LDAP_PASS=password
     - LOG_LEVEL=ERROR
-    - LOGFILE=gcds-sync.log
+    - LOG_FILE=gcds-sync.log
     - MAIL_FROM=gcds@example.com
     - MAIL_TO=gcds@example.com
     - SMTP_HOST=smtp.example.com
