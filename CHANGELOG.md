@@ -1,3 +1,9 @@
+## 4.5.3 2020-08-20 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Update cron.sh to pull container environment variables properly
+
+
 ## 4.5.2 2020-07-27 <dave at tiredofit dot ca>
 
    ### Changed
