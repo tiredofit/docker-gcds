@@ -2,9 +2,9 @@
 
 check_errors(){
     if ls /assets/config/.syncState/*.lock >/dev/null 2>&1; then
-        lockfile=`ls -C /assets/config/.SyncState/*.lock | sed "s~/assets/config/.syncState/~~g"`
+        lockfile=$(ls -C /assets/config/.SyncState/*.lock | sed "s~/assets/config/.syncState/~~g")
 
-        if [ $(stat --format=%Y /assets/config/.syncState/$lockfile) -le $(( `date +%s` - 1800 )) ]; then
+        if [ $(stat --format=%Y /assets/config/.syncState/$lockfile) -le $(( $(date +%s) - 1800 )) ]; then
             if var_true "${ENABLE_WEBHOOK_NOTIFICATIONS}" ; then
                 /usr/local/bin/webhook-alert $WEBHOOK_CHANNEL "*Lockfile Issue*" "The Google Cloud Directory Sync seems to be hung due to a stale lockfile. I've deleted it, however this was after 30 minutes of hanging. Please monitor the container for any further issues.\n "  "gcds-app"\;
             fi
