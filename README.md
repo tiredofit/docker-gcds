@@ -1,6 +1,5 @@
 # hub.docker.com/r/tiredofit/gcds
 
-[![Build Status](https://img.shields.io/docker/build/tiredofit/gcds.svg)](https://hub.docker.com/r/tiredofit/gcds)
 [![Docker Pulls](https://img.shields.io/docker/pulls/tiredofit/gcds.svg)](https://hub.docker.com/r/tiredofit/gcds)
 [![Docker Stars](https://img.shields.io/docker/stars/tiredofit/gcds.svg)](https://hub.docker.com/r/tiredofit/gcds)
 [![Docker Layers](https://images.microbadger.com/badges/image/tiredofit/gcds.svg)](https://microbadger.com/images/tiredofit/gcds)
