@@ -1,5 +1,5 @@
 FROM tiredofit/debian:buster
-LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
+LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
 RUN set -x && \
   ### Dependencies Package Install
