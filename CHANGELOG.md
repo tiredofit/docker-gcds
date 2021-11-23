@@ -1,3 +1,10 @@
+## 5.1.0 2021-11-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Debian Bullseye base
+      - Python 3
+
+
 ## 5.0.0 2020-08-20 <dave at tiredofit dot ca>
 
    ### Added

@@ -1,4 +1,4 @@
-FROM tiredofit/debian:buster
+FROM docker.io/tiredofit/debian:bullseye
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
 RUN set -x && \
@@ -10,8 +10,8 @@ RUN set -x && \
                   expect \
                   libxml2-utils \
                   ldap-utils \
-                  python \
-                  python-ldap \
+                  python3 \
+                  python3-ldap \
                   s-nail \
                   && \
      \

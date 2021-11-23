@@ -20,7 +20,7 @@ services:
     - SMTP_PORT=25
     - WEBHOOK_URL=https://example.com/webhook/12345678
     - WEBHOOK_CHANNEL=#general
-    - ZABBIX_HOSTNAME=gcds-app
+    - CONTAINER_NAME=gcds-app
     networks:
     - internal
     - services
