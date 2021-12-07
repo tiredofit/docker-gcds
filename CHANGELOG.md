@@ -1,3 +1,9 @@
+## 5.1.1 2021-12-07 <dave at tiredofit dot ca>
+
+   ### Added
+      - Add Zabbix Auto register support for templates
+
+
 ## 5.1.0 2021-11-23 <dave at tiredofit dot ca>
 
    ### Changed

@@ -12,6 +12,14 @@ print_debug "Adding cleanup script to cron"
 echo "0 * * * * /gcds/cleanup.sh >/dev/null 2>&1 " >>/assets/cron/crontab.txt
 /usr/bin/crontab /assets/cron/crontab.txt
 
+if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
+	source /assets/defaults/03-monitoring
+	cat <<EOF > "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}.d"/tiredofit_gcds.conf
+# Zabbix GCDS Configuration - Automatically Generated
+# Find Companion Zabbix Server Templates at https://github.com/tiredofit/docker-gcds
+# Autoregister=gcds
+EOF
+fi
 
 if [ ! -d "/assets/config/.java" ]; then
     print_debug "Copying Java State to container"
