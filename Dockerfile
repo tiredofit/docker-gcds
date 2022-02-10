@@ -1,6 +1,9 @@
 FROM docker.io/tiredofit/debian:bullseye
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
+ENV IMAGE_NAME="tiredofit/gcds" \
+    IMAGE_REPO_URL="https://github.com/tiredofit/docker-gcds/"
+
 RUN set -x && \
   ### Dependencies Package Install
     apt-get update && \
