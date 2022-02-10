@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv bash
 
 DOMAIN=${DOMAIN:-"example.com"}
 DRY_RUN=${DRY_RUN:-"TRUE"}

@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv bash
 
 check_errors(){
     if ls /assets/config/.syncState/*.lock >/dev/null 2>&1; then
