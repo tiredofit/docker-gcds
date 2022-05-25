@@ -1,3 +1,9 @@
+## 5.1.6 2022-05-25 <dave at tiredofit dot ca>
+
+   ### Added
+      - Perform upgrade-config command on startup to avoid version mismatches.
+
+
 ## 5.1.5 2022-05-25 <dave at tiredofit dot ca>
 
    ### Changed

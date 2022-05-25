@@ -139,6 +139,7 @@ EOD
 else
 	print_debug "Not generating new configuration, copying existing configuraiton file over to runtime config."
 	cp /assets/config/$CONFIG_FILE $GCDS_XML_FILE
+	silent /gcds/update-config -c $GCDS_XML_FILE
 fi
 
 ### Update SMTP Host
