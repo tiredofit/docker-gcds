@@ -1,3 +1,9 @@
+## 5.1.4 2022-05-25 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for crontab cleanup script not executing properly
+
+
 ## 5.1.3 2022-02-09 <dave at tiredofit dot ca>
 
    ### Changed

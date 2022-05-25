@@ -8,10 +8,6 @@ PROCESS_NAME="gcds"
 print_debug "Making log dir"
 mkdir -p "${LOG_PATH}"
 
-print_debug "Adding cleanup script to cron"
-echo "0 * * * * /gcds/cleanup.sh >/dev/null 2>&1 " >>/assets/cron/crontab.txt
-/usr/bin/crontab /assets/cron/crontab.txt
-
 create_zabbix gcds
 
 if [ ! -d "/assets/config/.java" ]; then
