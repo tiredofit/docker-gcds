@@ -1,3 +1,9 @@
+## 5.1.5 2022-05-25 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for 5.14
+
+
 ## 5.1.4 2022-05-25 <dave at tiredofit dot ca>
 
    ### Changed

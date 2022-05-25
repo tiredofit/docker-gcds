@@ -1,8 +1,7 @@
 FROM docker.io/tiredofit/debian:bullseye
 LABEL maintainer="Dave Conroy (github.com/tiredofit)"
 
-ENV CRON_CLEANUP=0 * * * * /gcds/cleanup.sh >/dev/null 2>&1  \
-    IMAGE_NAME="tiredofit/gcds" \
+ENV IMAGE_NAME="tiredofit/gcds" \
     IMAGE_REPO_URL="https://github.com/tiredofit/docker-gcds/"
 
 RUN set -x && \
