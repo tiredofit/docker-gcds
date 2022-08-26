@@ -1,3 +1,9 @@
+## 5.1.7 2022-08-26 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Set +x bit on auth and cleanup scripts
+
+
 ## 5.1.6 2022-05-25 <dave at tiredofit dot ca>
 
    ### Added
