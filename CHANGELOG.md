@@ -1,3 +1,9 @@
+## 5.1.8 2022-11-01 <dave at tiredofit dot ca>
+
+   ### Added
+      - GFoogle Cloud Directory Sync 5.0.20
+
+
 ## 5.1.7 2022-08-26 <dave at tiredofit dot ca>
 
    ### Changed
