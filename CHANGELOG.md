@@ -1,3 +1,10 @@
+## 5.1.9 2022-11-25 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Environmentalize version number for easier upgrade and downgrades
+      - Fix installation directory to install back in /gcds
+
+
 ## 5.1.8 2022-11-01 <dave at tiredofit dot ca>
 
    ### Added
