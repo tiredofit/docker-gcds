@@ -1,0 +1,40 @@
+services:
+  gcds-app:
+    image: tiredofit/gcds:latest
+    container_name: gcds-app
+    hostname: gcds-app
+    volumes:
+      - ./logs:/logs
+      - ./config:/config
+    environment:
+      - TIMEZONE=America/Vancouver
+      - CONTAINER_NAME=gcds-app
+
+      - MODE=SCHEDULER
+
+      - CONFIG_FILE=config.xml
+      - DOMAIN=example.com
+
+      - DRY_RUN=TRUE
+
+      - LOG_LEVEL=INFO
+
+      - SYNC_INTERVAL=30
+
+      - NOTIFICATION_TYPE=email,rocketchat
+
+      - MAIL_FROM=gcds@example.com
+      - MAIL_TO=recipient@example.com
+      - SMTP_HOST=smtp.example.com
+      - SMTP_PORT=25
+
+      - ROCKETCHAT_WEB_URL=https://rocket.chat.example.com/webhooks/abcdef123
+      - ROCKETCHAT_RECIPIENT=@username,@username2,#roomname1,#roomname2
+      - ROCKETCHAT_USERNAME=GCDS
+    networks:
+      - services
+    restart: always
+
+networks:
+  services:
+    external: true

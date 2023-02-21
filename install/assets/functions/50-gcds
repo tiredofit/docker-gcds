@@ -1,0 +1,426 @@
+#!/command/with-contenv bash
+
+bootstrap_filesystem() {
+    if [ ! -d "${CONFIG_PATH}" ] ; then
+        mkdir -p "${CONFIG_PATH}"
+    fi
+
+    print_debug "Creating Sync State folders and linking previous Java State"
+    mkdir -p "${CONFIG_PATH}"/SyncState
+
+    if [ ! -d "${CONFIG_PATH}"/.java ]; then
+        print_debug "Copying Java State to container"
+        cp -R /assets/gcds/.java "${CONFIG_PATH}"
+    fi
+
+    ln -sf "${CONFIG_PATH}"/.java /gcds/.java
+    ln -sf "${CONFIG_PATH}"/SyncState /gcds/syncState
+
+    if [ "${LOG_TYPE,,}" = "both" ] || [ "${LOG_TYPE,,}" = "file" ] ; then
+        if [ ! -d "${LOG_PATH}" ] ; then
+            mkdir -p "${LOG_PATH}"
+        fi
+        create_logrotate gcds "${LOG_PATH}"/*.log gcds gcds gcds
+    fi
+
+    chown -R gcds:gcds \
+                        "${CONFIG_PATH}" \
+                        "${LOG_PATH}"
+}
+
+check_errors() {
+    halt_scheduling() {
+        if var_true "${ENABLE_SCHEDULER}" ; then
+            print_error "Halting any scheduling. You will need to fix the error and restart the container to enable scheduled syncing."
+            service_stop 50-gcds-scheduler
+            stop_scheduler=true
+        fi
+    }
+
+    if ls "${CONFIG_PATH}"/syncState/*.lock >/dev/null 2>&1; then
+        lockfile=$(ls -C "${CONFIG_PATH}"/SyncState/*.lock | sed "s|${CONFIG_PATH}/syncState||g")
+        if [ $(stat --format=%Y "${CONFIG_PATH}"/"${lockfile}") -le $(( $(date +%s) - 1800 )) ]; then
+            error_code=100
+            rm -rf  "${CONFIG_PATH}"/syncState/"${lockfile}"
+            notify \
+                    "${log_date}" \
+                    "${LOG_PATH}/${log_filename}" \
+                    "${error_code}" \
+                    "Lockfile Issue" \
+                    "GCDS seems to have hung due to a stale lockfile. The lockfile has been deleted, however it would be good to monitor the container for any anomalies."
+        fi
+    fi
+
+    if grep -qF '[FATAL] [usersyncapp.cli.Sync] Unable to load configuration from specified file' /tmp/${log_filename} ; then
+        error_code=101
+        print_error "Problem with configuration file - See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
+        notify \
+                "${log_date}" \
+                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${error_code}" \
+                "[FATAL] Configuration File Issue" \
+                "GCDS is failing to sync due to an issue with the configuration file. Syncing has been disabled. Please restart the container"
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        halt_scheduling
+        return "${error_code}"
+    fi
+
+    if grep -qF '[FATAL] [usersyncapp.cli.Sync] The configuration specified is from another version of Google Cloud Directory Sync.' /tmp/${log_filename} ; then
+        error_code=102
+        print_error "Configuration file is from another version. Login using the GUI, review the configuration and save the configuration and restart. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
+        notify \
+                "${log_date}" \
+                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${error_code}" \
+                "[FATAL] Configuration File Version Mismatch" \
+                "GCDS is failing to sync due to the configuration file being from another version. Syncing has been disabled. Please upgrade the configuration and restart the container."
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        halt_scheduling
+        return "${error_code}"
+    fi
+
+    if grep -qF '[ERROR] [usersyncapp.sync.ConfigErrorHandler]' /tmp/${log_filename} ; then
+        error_code=103
+        print_error "Detecting synchronization error with the OAUTH key. You will likely need to reauthorize using the GUI and restart the container. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
+        notify \
+                "${log_date}" \
+                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${error_code}" \
+                "[ERROR] OAUTH Key expired" \
+                "GCDS is failing to sync due to an issue with the OAUTH key. Reauthorize with the GUI and restart the container. Syncing has been disabled."
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        halt_scheduling
+        return "${error_code}"
+    fi
+
+    if grep -qF '"LDAP Plugin" threw a fatal exception' /tmp/"${log_filename}" ; then
+        error_code=104
+        print_error "Detecting Fatal error due to LDAP problems. Please reconfigure and restart the container. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
+        notify \
+                "${log_date}" \
+                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${error_code}" \
+                "[ERROR] LDAP problems detected" \
+                "GCDS is failing to sync due to LDAP issues. Please reconfigure with the GUI and restart the container. Syncing has been disabled."
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        halt_scheduling
+        return "${error_code}"
+    fi
+
+    if [ -z "${error_code}" ] ; then
+        error_code=0
+    fi
+    silent rm -rf /tmp/"${log_filename}"
+}
+
+configure_gcds() {
+    if [ -f "${CONFIG_PATH}"/"${CONFIG_FILE}" ] ; then
+        if var_true "${AUTO_UPGRADE_CONFIG}" ; then
+            if [ -n "${OAUTH_TOKEN}" ] ; then
+                oauth_token=$(mktemp)
+                oauth_token_arg="-importkeys ${oauth_token} "
+                echo "${OAUTH_TOKEN}" > ${oauth_token}
+                if [ -n "${OAUTH_TOKEN_PASSWORD}" ] ; then
+                    oauth_token_arg+="--password ${OAUTH_TOKEN_PASSWORD}"
+                fi
+            fi
+            silent /gcds/update-config -c "${CONFIG_PATH}"/"${CONFIG_FILE}" ${oauth_token_args}
+            rm -rf "${oauth_token}"
+        fi
+    fi
+}
+
+configure_monitoring() {
+    source /assets/defaults/03-monitoring
+    cat <<EOF > "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}".d/gcds.conf
+# Zabbix GCDS Exporter Configuration - Automatically Generated
+# Find Companion Zabbix Server Templates at https://github.com/tiredofit/docker-kopano
+# Autoregister=gcds
+
+UserParameter=gcds.version,/gcds/sync-cmd -v | head -n 1 | awk '{print \$2}'
+EOF
+    create_zabbix gcds
+}
+
+notify() {
+    notification_custom() {
+        if [ -n "${NOTIFICATION_SCRIPT}" ] ; then
+            if var_true "${NOTIFICATION_SCRIPT_SKIP_X_VERIFY}" ; then
+                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbsync_start_time}" "${dbsync_finish_time}" "${dbsync_total_time}" "${target}" "${filesize}" "${checksum_value}"
+            else
+                if [ -x "${NOTIFICATION_SCRIPT}" ] ; then
+                    print_notice "Found POST_SCRIPT environment variable. Executing '${NOTIFICATION_SCRIPT}"
+                    # script timestamp logfile errorcode subject body
+                    eval "${NOTIFICATION_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
+                else
+                    print_error "Can't execute NOTIFICATION_SCRIPT environment variable '${NOTIFICATION_SCRIPT}' as its filesystem bit is not executible!"
+                fi
+            fi
+        else
+            print_error "[notifications] No NOTIFICATION_SCRIPT variable set - Skipping sending Custom notifications"
+        fi
+    }
+
+    notification_email() {
+        if [ -z "${MAIL_FROM}" ] ; then print_error "[notifications] No MAIL_FROM variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if [ -z "${MAIL_TO}" ] ; then print_error "[notifications] No MAIL_TO variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if [ -z "${SMTP_HOST}" ] ; then print_error "[notifications] No SMTP_HOST variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if [ -z "${SMTP_PORT}" ] ; then print_error "[notifications] No SMTP_PORT variable set - Skipping sending Email notifications" ; skip_mail=true ; fi
+        if var_nottrue "${skip_mail}" ; then
+            mail_recipients=$(echo "${MAIL_TO}" | tr "," "\n")
+            for mail_recipient in $mail_recipients ; do
+                cat <<EOF | s-nail -v \
+                                        -r "${MAIL_FROM}" \
+                                        -s "[GCDS] [${DOMAIN}] ${3}" \
+                                        -S smtp="${SMTP_HOST}":"${SMTP_PORT}" \
+                                        "${mail_recipients}"
+Time: ${1}
+Log File: {2}
+Error Code: ${3}
+
+${4}
+EOF
+            done
+        fi
+    }
+
+    notification_mattermost() {
+        if [ -z "${MATTERMOST_RECIPIENT}" ] ; then print_error "[notifications] No MATTERMOST_RECIPIENT variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
+        if [ -z "${MATTERMOST_USERNAME}" ] ; then print_error "[notifications] No MATTERMOST_USERNAME variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
+        if [ -z "${MATTERMOST_WEBHOOK_URL}" ] ; then print_error "[notifications] No MATTERMOST_WEBHOOK_URL variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
+        if var_nottrue "${skip_mattermost}" ; then
+        emoji=":bomb:"
+        message="*[GCDS] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
+        mattermost_recipients=$(echo "${MATTERMOST_RECIPIENT}" | tr "," "\n")
+            for mattermost_recipient in $mattermost_recipients ; do
+                payload="payload={\"channel\": \"${mattermost_recipient//\"/\\\"}\", \"username\": \"${MATTERMOST_USERNAME//\"/\\\"}\", \"text\": \"${message//\"/\\\"}\", \"icon_emoji\": \"${emoji}\"}"
+                silent /usr/bin/curl \
+                                        -m 5 \
+                                        --data-urlencode "${payload}" \
+                                        "${MATTERMOST_WEBHOOK_URL}"
+            done
+        fi
+    }
+
+    notification_matrix() {
+        if [ -z "${MATRIX_HOST}" ] ; then print_error "[notifications] No MATRIX_HOST variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if [ -z "${MATRIX_ROOM}" ] ; then print_error "[notifications] No MATRIX_ROOM variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if [ -z "${MATRIX_ACCESS_TOKEN}" ] ; then print_error "[notifications] No MATRIX_ACCESS_TOKEN variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if var_nottrue "${skip_matrix}" ; then
+            matrix_rooms=$(echo "${MATRIX_ROOM}" | tr "," "\n")
+            for matrix_room in $matrix_rooms ; do
+                curl \
+                        -XPOST \
+                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[GCDS] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}\"*hello}" \
+                        "${MATRIX_HOST}/_matrix/client/r0/rooms/${matrix_room}/send/m.room.message?access_token=${MATRIX_ACCESS_TOKEN}"
+            done
+        fi
+    }
+
+    notification_rocketchat() {
+        if [ -z "${ROCKETCHAT_RECIPIENT}" ] ; then print_error "[notifications] No ROCKETCHAT_RECIPIENT variable set - Skipping sending Rocket.Chat notifications" ; skip_rocketchat=true ; fi
+        if [ -z "${ROCKETCHAT_USERNAME}" ] ; then print_error "[notifications] No ROCKETCHAT_USERNAME variable set - Skipping sending Rocket.Chat notifications" ; skip_rocketchat=true ; fi
+        if [ -z "${ROCKETCHAT_WEBHOOK_URL}" ] ; then print_error "[notifications] No ROCKETCHAT_WEBHOOK_URL variable set - Skipping sending Rocket.Chat notifications" ; skip_rocketchat=true ; fi
+        if var_nottrue "${skip_rocketchat}" ; then
+            emoji=":bomb:"
+            message="*[GCDS] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}"
+            rocketchat_recipients=$(echo "${ROCKETCHAT_RECIPIENT}" | tr "," "\n")
+            for rocketchat_recipient in $rocketchat_recipients ; do
+                payload="payload={\"channel\": \"${rocketchat_recipient//\"/\\\"}\", \"username\": \"${ROCKETCHAT_USERNAME//\"/\\\"}\", \"text\": \"${message//\"/\\\"}\", \"icon_emoji\": \"${emoji}\"}"
+                silent /usr/bin/curl \
+                                        -m 5 \
+                                        --data-urlencode "${payload}" \
+                                        "${ROCKETCHAT_WEBHOOK_URL}"
+            done
+        fi
+    }
+
+    # $1 timeststamp
+    # $2 logfile
+    # $2 errorcode
+    # $3 subject
+    # $4 body
+
+    notification_types=$(echo "${NOTIIFICATION_TYPE}" | tr "," "\n")
+    for notification_type in $notification_types ; do
+        case "${notification_type,,}" in
+            "custom" )
+                print_debug "Sending Notification via custom"
+                notification_custom "${1}" "${2}" "${3}" "${4}" "${5}"
+            ;;
+            "email" | "mail" )
+                print_debug "Sending Notification via email"
+                notification_email "${1}" "${2}" "${3}" "${4}" "${5}"
+            ;;
+            "matrix" )
+                print_debug "Sending Notification via Matrix"
+                notification_matrix "${1}" "${2}" "${3}" "${4}" "${5}"
+            ;;
+            "mattermost" )
+                print_debug "Sending Notification via Mattermost"
+                notification_mattermost "${1}" "${2}" "${3}" "${4}" "${5}"
+            ;;
+            "rocketchat" )
+                print_debug "Sending Notification via Rocketchat"
+                notification_rocketchat "${1}" "${2}" "${3}" "${4}" "${5}"
+            ;;
+            * )
+                print_error "Unknown 'NOTIFICATION_TYPE=${notification_type}' environment value. "
+            ;;
+        esac
+    done
+}
+
+perform_sync() {
+    log_unixdate=$(date +"%s")
+    log_date=$(date -d @${log_unixdate} +"%Y%m%d_%H%M%S")
+    log_filename=$log_date-${LOG_FILE}
+
+    if var_true "${DRY_RUN}" ; then
+        print_notice "Starting Dry Run.. Please Change environment variable \`DRY_RUN=FALSE\` to commit changes to Google"
+        dry_run_arg=
+    else
+        print_notice "Starting Sync Process and comitting changes to Google"
+        dry_run_arg="-a"
+    fi
+    su gcds \
+            -s /bin/sh \
+            -c " \
+                    /gcds/sync-cmd \
+                                    -c ${CONFIG_PATH}/${CONFIG_FILE} \
+                                    -l ${LOG_LEVEL} \
+                                    -r ${LOG_PATH}/${log_filename} \
+                                    -o ${flush_arg} ${dry_run_arg} 2> /tmp/${log_filename} \
+                                    "
+    app_exit_code=$?
+}
+
+post_sync() {
+    sync_finish_time=$(date +"%s")
+    sync_total_time=$(echo $((sync_finish_time-sync_start_time)))
+
+    if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ] ; then
+        source /assets/defaults/03-monitoring
+        print_notice "Sending Sync Statistics to Zabbix"
+        silent s6-setuidgid "${ZABBIX_USER}" zabbix_sender \
+                            -c "${ZABBIX_CONFIG_PATH}"/${ZABBIX_CONFIG_FILE} \
+                            -k gcds.last_sync \
+                            -o "${log_unixtime}"
+        silent zabbix_sender \
+                            -c "${ZABBIX_CONFIG_PATH}"/${ZABBIX_CONFIG_FILE} \
+                            -k gcds.sync_status \
+                            -o "${error_code}"
+        silent zabbix_sender \
+                            -c "${ZABBIX_CONFIG_PATH}"/${ZABBIX_CONFIG_FILE} \
+                            -k gcds.sync_duration \
+                            -o "$(echo $((sync_finish_time-sync_start_time)))"
+        if [ "$?" != "0" ] ; then
+            print_error "Error sending statistics, consider disabling with 'CONTAINER_ENABLE_MONITORING=FALSE'"
+        fi
+    fi
+
+    ### Post Script Support
+    if [ -n "${POST_SCRIPT}" ] ; then
+        if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
+            eval "${POST_SCRIPT}" "${error_code}" "${log_unixtime}" "$(echo $((sync_finish_time-sync_start_time)))"
+        else
+            if [ -x "${POST_SCRIPT}" ] ; then
+                print_notice "Found POST_SCRIPT environment variable. Executing '${POST_SCRIPT}"
+                # file error_code start_time duration
+                eval "${POST_SCRIPT}" "${error_code}" "${log_unixtime}" "$(echo $((sync_finish_time-sync_start_time)))"
+            else
+                print_error "Can't execute POST_SCRIPT environment variable '${POST_SCRIPT}' as its filesystem bit is not executible!"
+            fi
+        fi
+    fi
+
+    ### Post Sync Custom Script Support
+    if [ -d "${SCRIPT_LOCATION_POST}" ] && dir_notempty "${SCRIPT_LOCATION_POST}" ; then
+        for f in $(find ${SCRIPT_LOCATION_POST} -name \*.sh -type f); do
+            if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
+                # file error_code start_time duration
+                ${f} "${POST_SCRIPT}" "${error_code}" "${log_unixtime}" "$(echo $((sync_finish_time-sync_start_time)))"
+            else
+                if [ -x "${f}" ] ; then
+                    print_notice "Executing post sync custom script : '${f}'"
+                    # file error_code start_time duration
+                    ${f} "${POST_SCRIPT}" "${error_code}" "${log_unixtime}" "$(echo $((sync_finish_time-sync_start_time)))"
+                else
+                    print_error "Can't run post sync custom script: '${f}' as its filesystem bit is not executible!"
+                fi
+            fi
+        done
+    fi
+    unset error_code
+}
+
+pre_sync() {
+    ### Pre Script Support
+    if [ -n "${PRE_SCRIPT}" ] ; then
+        if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
+            ## script sync_start_time
+            eval ${f} "${sync_start_time}"
+        else
+            if [ -x "${PRE_SCRIPT}" ] ; then
+                print_notice "Found PRE_SCRIPT environment variable. Executing '${PRE_SCRIPT}"
+                ## script sync_start_time
+                eval ${f} "${sync_start_time}"
+            else
+                print_error "Can't execute PRE_SCRIPT environment variable '${PRE_SCRIPT}' as its filesystem bit is not executible!"
+            fi
+        fi
+    fi
+
+    ### Pre Sync Custom Script Support
+    if [ -d "${SCRIPT_LOCATION_PRE}" ] && dir_notempty "${SCRIPT_LOCATION_PRE}" ; then
+        for f in $(find ${SCRIPT_LOCATION_PRE} -name \*.sh -type f); do
+            if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
+                ## script sync_start_time
+                eval ${f} "${sync_start_time}"
+            else
+                if [ -x "${f}" ] ; then
+                    print_notice "Executing pre sync custom script : '${f}'"
+                    ## script sync_start_time
+                    ${f} "${sync_start_time}"
+                else
+                    print_error "Can't run pre sync custom script: '${f}' as its filesystem bit is not executible!"
+                fi
+            fi
+        done
+    fi
+}
+
+setup_container_mode() {
+    if [ -f "/tmp/.container/gcds_mode/.mode-env" ]; then
+        print_debug "Importing MODE environment generated variables"
+        source /tmp/.container/gcds_mode/.mode-env
+    else
+        mkdir -p /tmp/.container/gcds_mode/
+        sanity_var MODE "Container Mode 'GUI' 'STANDALONE' 'SCHEDULER' 'ALL' "
+        if [ "${MODE,,}" = "all" ] ; then
+            print_debug "Container Mode: ALL"
+            print_debug "Creating MODE environment generated variables"
+            echo "ENABLE_SCHEDULER=TRUE" >> /tmp/.container/gcds_mode/.mode-env
+        else
+            modes=$(echo "$MODE" | tr "," "\n")
+            for mode in $modes ; do
+                case "${mode,,}" in
+                    "standalone" | "manual" )
+                        print_debug "Enabling Container Mode for: STANDALONE"
+                        echo "ENABLE_STANDALONE=TRUE" >> /tmp/.container/gcds_mode/.mode-env
+                    ;;
+                    "scheduler" )
+                        print_debug "Enabling Container Mode for: SCHEDULER"
+                        echo "ENABLE_SCHEDULER=TRUE" >> /tmp/.container/gcds_mode/.mode-env
+                    ;;
+                    *)
+                        print_error "Unknown 'MODE' environment variable - exitting.."
+                        exit 1
+                    ;;
+                esac
+            done
+        fi
+        source /tmp/.container/gcds_mode/.mode-env
+    fi
+}
+

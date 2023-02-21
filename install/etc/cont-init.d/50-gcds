@@ -1,0 +1,30 @@
+#!/command/with-contenv bash
+
+source /assets/functions/00-container
+prepare_service
+PROCESS_NAME="gcds"
+
+setup_container_mode
+
+if [ ! -f "/tmp/.container/container-restart" ] ; then
+    if var_true "${ENABLE_STANDALONE}" ; then
+        print_debug "Configuring Standalone Mode"
+        service_stop 50-gcds-scheduler
+        liftoff
+    fi
+
+    if var_true "${ENABLE_SCHEDULER}" ; then
+        print_debug "Configuring Scheduler"
+    else
+        service_stop 50-gcds-scheduler
+    fi
+
+    bootstrap_filesystem
+    configure_gcds
+    configure_monitoring
+fi
+
+print_debug "Cleanup any sync lock files"
+rm -rf "${CONFIG_PATH}"/SyncState/*.lock
+
+liftoff

@@ -1,0 +1,210 @@
+{
+    "zabbix_export": {
+        "version": "6.2",
+        "date": "2023-01-28T21:45:24Z",
+        "template_groups": [
+            {
+                "uuid": "a571c0d144b14fd4a87a9d9b2aa9fcd6",
+                "name": "Templates/Applications"
+            }
+        ],
+        "templates": [
+            {
+                "uuid": "8f8bf985e72a48f5ac4e92a00e522893",
+                "template": "GCDS",
+                "name": "GCDS",
+                "description": "Google Cloud Directory Sync\n\nThis template is meant for use specifically with https://github.com/tiredofit/docker-gcds\nMeant for Version 6.0 and up.",
+                "groups": [
+                    {
+                        "name": "Templates/Applications"
+                    }
+                ],
+                "items": [
+                    {
+                        "uuid": "3e7fa36741144689b2e21c8f8a592676",
+                        "name": "GCDS: Last Sync Time",
+                        "key": "gcds.last_sync",
+                        "history": "7d",
+                        "triggers": [
+                            {
+                                "uuid": "62e511e66b6545dd933d921bd4088168",
+                                "expression": "nodata(/GCDS/gcds.last_sync,2d)=1",
+                                "name": "GCDS: No Syncs detected in 2 days",
+                                "priority": "HIGH",
+                                "manual_close": "YES"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "5e6d8d8cb351480293cec34b45bcd601",
+                        "name": "GCDS: Sync Duration",
+                        "type": "TRAP",
+                        "key": "gcds.sync_duration",
+                        "delay": "0",
+                        "history": "7d",
+                        "description": "How long the sync took",
+                        "triggers": [
+                            {
+                                "uuid": "4989397e34a847b2aca79bd34688005e",
+                                "expression": "last(/GCDS/gcds.sync_duration)<10",
+                                "name": "GCDS: Last Sync duration under 10 seconds",
+                                "priority": "AVERAGE",
+                                "manual_close": "YES"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "359839aa37fc491f99208b4ce53258d1",
+                        "name": "GCDS: Last Sync Status",
+                        "type": "TRAP",
+                        "key": "gcds.sync_status",
+                        "delay": "0",
+                        "history": "7d",
+                        "description": "Maps Exit Codes as parsed from the logfile",
+                        "valuemap": {
+                            "name": "Sync Status"
+                        },
+                        "triggers": [
+                            {
+                                "uuid": "78ba5ff8d88946e5abb51ebf1a77cc18",
+                                "expression": "last(/GCDS/gcds.sync_status)=1",
+                                "name": "GCDS: Failed Sync",
+                                "priority": "HIGH",
+                                "manual_close": "YES"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "dc0318c0e31f43f69be713e85f1b5d15",
+                        "name": "GCDS: Version",
+                        "key": "gcds.version",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "Google Cloud Directory Sync"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "a8d34c0e9ec5464581fa6abad02a5766",
+                        "name": "GCDS: CPU Utilization",
+                        "type": "ZABBIX_ACTIVE",
+                        "key": "proc.cpu.util['sync-cmd']",
+                        "history": "7d",
+                        "value_type": "FLOAT",
+                        "units": "%",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "Google Cloud Directory Sync"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "678fa2d8fadd41929ba40a348f43caa2",
+                        "name": "GCDS: Memory usage (rss)",
+                        "key": "proc.mem['sync-cmd',,,,rss]",
+                        "history": "7d",
+                        "units": "B",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "Google Cloud Directory Sync"
+                            }
+                        ]
+                    },
+                    {
+                        "uuid": "c7deae07fc9549d5b757fda87cc30491",
+                        "name": "GCDS: Memory usage (Virtual)",
+                        "type": "ZABBIX_ACTIVE",
+                        "key": "proc.mem['sync-cmd',,,,vsize]",
+                        "history": "7d",
+                        "units": "B",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "Google Cloud Directory Sync"
+                            }
+                        ]
+                    }
+                ],
+                "tags": [
+                    {
+                        "tag": "Service",
+                        "value": "Authentication"
+                    }
+                ],
+                "valuemaps": [
+                    {
+                        "uuid": "8e4a3789359943af8ad85139f9fb885e",
+                        "name": "Sync Status",
+                        "mappings": [
+                            {
+                                "value": "0",
+                                "newvalue": "OK"
+                            },
+                            {
+                                "type": "GREATER_OR_EQUAL",
+                                "value": "1",
+                                "newvalue": "FAIL"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "graphs": [
+            {
+                "uuid": "a11b5f36414147de9c8544ec0db834d2",
+                "name": "GCDS: sync-cmd CPU utilization",
+                "graph_items": [
+                    {
+                        "color": "199C0D",
+                        "calc_fnc": "ALL",
+                        "item": {
+                            "host": "GCDS",
+                            "key": "proc.cpu.util['sync-cmd']"
+                        }
+                    }
+                ]
+            },
+            {
+                "uuid": "71b70a099efd41448cef45bf2f4ca4ea",
+                "name": "GCDS: sync-cmd Memory Utilization",
+                "graph_items": [
+                    {
+                        "color": "199C0D",
+                        "calc_fnc": "ALL",
+                        "item": {
+                            "host": "GCDS",
+                            "key": "proc.mem['sync-cmd',,,,rss]"
+                        }
+                    },
+                    {
+                        "sortorder": "1",
+                        "color": "F63100",
+                        "calc_fnc": "ALL",
+                        "item": {
+                            "host": "GCDS",
+                            "key": "proc.mem['sync-cmd',,,,vsize]"
+                        }
+                    }
+                ]
+            },
+            {
+                "uuid": "af14c7e39d27428d841834721f4b57ed",
+                "name": "GCDS: Sync Duration",
+                "graph_items": [
+                    {
+                        "color": "199C0D",
+                        "calc_fnc": "ALL",
+                        "item": {
+                            "host": "GCDS",
+                            "key": "gcds.sync_duration"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}

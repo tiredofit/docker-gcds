@@ -1,3 +1,23 @@
+## 7.0.0 2023-02-21 <dave at tiredofit dot ca>
+
+This is a re-release of the ill-fated 6.x.x series as version 7.0.0.
+This is a rewrite of the image to support changes that Google has enforced with regards to elimination of generating oauth tokens via the command line.
+Any configuration work will now need to be performed via the GUI on a _DIFFERENT_ system. The configuration file must be exported along with exporting the private keys.
+This release also implements pre/post synchronization hooks and notifications to various endpoints should errors be detected.
+
+   ### Added
+      - Google Cloud Directory Sync 5.0.22
+      - Run as GCDS all the time
+      - Implement new MODE routines to select SCHEDULER, or STANDALONE functionality
+      - Introduce `OAUTH_TOKEN` and `OAUTH_TOKEN_PASS` to migrate key states from source->destination server
+      - Strip old encryption and configuration routines
+      - Implement Notification endpoints for CUSTOM (your own script), EMAIL, MATRIX, MATTERMOST, ROCKETCHAT
+      - Rework logging
+      - Lots of other enhancements and code cleanup
+
+
+
+
 ## 5.1.9 2022-11-25 <dave at tiredofit dot ca>
 
    ### Changed
@@ -8,7 +28,7 @@
 ## 5.1.8 2022-11-01 <dave at tiredofit dot ca>
 
    ### Added
-      - GFoogle Cloud Directory Sync 5.0.20
+      - Google Cloud Directory Sync 5.0.20
 
 
 ## 5.1.7 2022-08-26 <dave at tiredofit dot ca>
