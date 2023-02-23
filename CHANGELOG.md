@@ -1,3 +1,9 @@
+## 7.0.1 2023-02-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Force logrotate config to be created
+
+
 ## 7.0.0 2023-02-21 <dave at tiredofit dot ca>
 
 This is a re-release of the ill-fated 6.x.x series as version 7.0.0.

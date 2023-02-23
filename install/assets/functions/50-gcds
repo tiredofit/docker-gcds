@@ -20,9 +20,10 @@ bootstrap_filesystem() {
         if [ ! -d "${LOG_PATH}" ] ; then
             mkdir -p "${LOG_PATH}"
         fi
-        create_logrotate gcds "${LOG_PATH}"/*.log gcds gcds gcds
+
     fi
 
+    create_logrotate gcds "${LOG_PATH}"/*.log gcds gcds gcds
     chown -R gcds:gcds \
                         "${CONFIG_PATH}" \
                         "${LOG_PATH}"
