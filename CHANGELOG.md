@@ -1,3 +1,9 @@
+## 7.0.2 2023-02-27 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix logrotate not firing for wildcard.log files
+
+
 ## 7.0.1 2023-02-23 <dave at tiredofit dot ca>
 
    ### Changed

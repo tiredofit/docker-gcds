@@ -22,8 +22,9 @@ bootstrap_filesystem() {
         fi
 
     fi
-
-    create_logrotate gcds "${LOG_PATH}"/*.log gcds gcds gcds
+    set -f
+    create_logrotate gcds "${LOG_PATH}/*.log" gcds gcds gcds
+    set +f
     chown -R gcds:gcds \
                         "${CONFIG_PATH}" \
                         "${LOG_PATH}"
