@@ -15,6 +15,7 @@ bootstrap_filesystem() {
 
     ln -sf "${CONFIG_PATH}"/.java /gcds/.java
     ln -sf "${CONFIG_PATH}"/SyncState /gcds/syncState
+    ln -sf "${CONFIG_PATH}"/GADS_nonAddressPrimaryKeyFile.tsv /gcds/GADS_nonAddressPrimaryKeyFile.tsv
 
     if [ "${LOG_TYPE,,}" = "both" ] || [ "${LOG_TYPE,,}" = "file" ] ; then
         if [ ! -d "${LOG_PATH}" ] ; then
@@ -22,9 +23,7 @@ bootstrap_filesystem() {
         fi
 
     fi
-    set -f
-    create_logrotate gcds "${LOG_PATH}/*.log" gcds gcds gcds
-    set +f
+    echo "0 0 * * * /usr/local/bin/logrotate_gcds >/dev/null 2>&1" > /assets/cron/gcds_logrotate
     chown -R gcds:gcds \
                         "${CONFIG_PATH}" \
                         "${LOG_PATH}"
@@ -41,56 +40,59 @@ check_errors() {
 
     if ls "${CONFIG_PATH}"/syncState/*.lock >/dev/null 2>&1; then
         lockfile=$(ls -C "${CONFIG_PATH}"/SyncState/*.lock | sed "s|${CONFIG_PATH}/syncState||g")
-        if [ $(stat --format=%Y "${CONFIG_PATH}"/"${lockfile}") -le $(( $(date +%s) - 1800 )) ]; then
+        if [ "$(stat --format=%Y "${CONFIG_PATH}"/"${lockfile}")" -le $(( $(date +%s) - 1800 )) ]; then
             error_code=100
             rm -rf  "${CONFIG_PATH}"/syncState/"${lockfile}"
             notify \
                     "${log_date}" \
-                    "${LOG_PATH}/${log_filename}" \
+                    "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename}" \
                     "${error_code}" \
                     "Lockfile Issue" \
                     "GCDS seems to have hung due to a stale lockfile. The lockfile has been deleted, however it would be good to monitor the container for any anomalies."
         fi
     fi
 
-    if grep -qF '[FATAL] [usersyncapp.cli.Sync] Unable to load configuration from specified file' /tmp/${log_filename} ; then
+    if grep -qF '[FATAL] [usersyncapp.cli.Sync] Unable to load configuration from specified file' /tmp/"${log_filename}" ; then
         error_code=101
         print_error "Problem with configuration file - See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
         notify \
                 "${log_date}" \
-                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
                 "[FATAL] Configuration File Issue" \
                 "GCDS is failing to sync due to an issue with the configuration file. Syncing has been disabled. Please restart the container"
-        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        sudo -u gcds mkdir -p "${LOG_PATH}"/"$(date +"%Y%m%d")"
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"$(date +"%Y%m%d")"/"${log_filename%%.*}".error
         halt_scheduling
         return "${error_code}"
     fi
 
-    if grep -qF '[FATAL] [usersyncapp.cli.Sync] The configuration specified is from another version of Google Cloud Directory Sync.' /tmp/${log_filename} ; then
+    if grep -qF '[FATAL] [usersyncapp.cli.Sync] The configuration specified is from another version of Google Cloud Directory Sync.' /tmp/"${log_filename}" ; then
         error_code=102
         print_error "Configuration file is from another version. Login using the GUI, review the configuration and save the configuration and restart. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
         notify \
                 "${log_date}" \
-                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
                 "[FATAL] Configuration File Version Mismatch" \
                 "GCDS is failing to sync due to the configuration file being from another version. Syncing has been disabled. Please upgrade the configuration and restart the container."
-        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        sudo -u gcds mkdir -p "${LOG_PATH}"/"$(date +"%Y%m%d")"
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"$(date +"%Y%m%d")"/"${log_filename%%.*}".error
         halt_scheduling
         return "${error_code}"
     fi
 
-    if grep -qF '[ERROR] [usersyncapp.sync.ConfigErrorHandler]' /tmp/${log_filename} ; then
+    if grep -qF '[ERROR] [usersyncapp.sync.ConfigErrorHandler]' /tmp/"${log_filename}" ; then
         error_code=103
         print_error "Detecting synchronization error with the OAUTH key. You will likely need to reauthorize using the GUI and restart the container. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
         notify \
                 "${log_date}" \
-                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
                 "[ERROR] OAUTH Key expired" \
                 "GCDS is failing to sync due to an issue with the OAUTH key. Reauthorize with the GUI and restart the container. Syncing has been disabled."
-        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        sudo -u gcds mkdir -p "${LOG_PATH}"/"$(date +"%Y%m%d")"
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"$(date +"%Y%m%d")"/"${log_filename%%.*}".error
         halt_scheduling
         return "${error_code}"
     fi
@@ -100,11 +102,12 @@ check_errors() {
         print_error "Detecting Fatal error due to LDAP problems. Please reconfigure and restart the container. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
         notify \
                 "${log_date}" \
-                "${LOG_PATH}/${log_filename%%.*}.error" \
+                "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
                 "[ERROR] LDAP problems detected" \
                 "GCDS is failing to sync due to LDAP issues. Please reconfigure with the GUI and restart the container. Syncing has been disabled."
-        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"${log_filename%%.*}".error
+        sudo -u gcds mkdir -p "${LOG_PATH}"/"$(date +"%Y%m%d")"
+        sudo -u gcds mv /tmp/"${log_filename}" "${LOG_PATH}"/"$(date +"%Y%m%d")"/"${log_filename%%.*}".error
         halt_scheduling
         return "${error_code}"
     fi
@@ -121,12 +124,12 @@ configure_gcds() {
             if [ -n "${OAUTH_TOKEN}" ] ; then
                 oauth_token=$(mktemp)
                 oauth_token_arg="-importkeys ${oauth_token} "
-                echo "${OAUTH_TOKEN}" > ${oauth_token}
+                echo "${OAUTH_TOKEN}" > "${oauth_token}"
                 if [ -n "${OAUTH_TOKEN_PASSWORD}" ] ; then
                     oauth_token_arg+="--password ${OAUTH_TOKEN_PASSWORD}"
                 fi
             fi
-            silent /gcds/update-config -c "${CONFIG_PATH}"/"${CONFIG_FILE}" ${oauth_token_args}
+            silent /gcds/update-config -c "${CONFIG_PATH}"/"${CONFIG_FILE}" "${oauth_token_arg}"
             rm -rf "${oauth_token}"
         fi
     fi
@@ -148,7 +151,7 @@ notify() {
     notification_custom() {
         if [ -n "${NOTIFICATION_SCRIPT}" ] ; then
             if var_true "${NOTIFICATION_SCRIPT_SKIP_X_VERIFY}" ; then
-                eval "${POST_SCRIPT}" "${exit_code}" "${dbtype}" "${DB_HOST}" "${1}" "${dbsync_start_time}" "${dbsync_finish_time}" "${dbsync_total_time}" "${target}" "${filesize}" "${checksum_value}"
+                eval "${NOTIFICATION_SCRIPT}" "${1}" "${2}" "${3}" "${4}" "${5}"
             else
                 if [ -x "${NOTIFICATION_SCRIPT}" ] ; then
                     print_notice "Found POST_SCRIPT environment variable. Executing '${NOTIFICATION_SCRIPT}"
@@ -275,7 +278,7 @@ EOF
 
 perform_sync() {
     log_unixdate=$(date +"%s")
-    log_date=$(date -d @${log_unixdate} +"%Y%m%d_%H%M%S")
+    log_date=$(date -d @"${log_unixdate}" +"%Y%m%d_%H%M%S")
     log_filename=$log_date-${LOG_FILE}
 
     if var_true "${DRY_RUN}" ; then
@@ -285,15 +288,19 @@ perform_sync() {
         print_notice "Starting Sync Process and comitting changes to Google"
         dry_run_arg="-a"
     fi
+    sudo -u gcds mkdir -p "${LOG_PATH}"/"$(date +"%Y%m%d")"
     su gcds \
             -s /bin/sh \
             -c " \
                     /gcds/sync-cmd \
                                     -c ${CONFIG_PATH}/${CONFIG_FILE} \
                                     -l ${LOG_LEVEL} \
-                                    -r ${LOG_PATH}/${log_filename} \
+                                    -r ${LOG_PATH}/$(date +"%Y%m%d")/${log_filename} \
                                     -o ${flush_arg} ${dry_run_arg} 2> /tmp/${log_filename} \
                                     "
+
+    cd "${LOG_PATH}"/"$(date +"%Y%m%d")"
+    ln -sf "$(date +"%Y%m%d")"/"${log_filename}" ../latest-sync.log
     app_exit_code=$?
 }
 
@@ -305,15 +312,15 @@ post_sync() {
         source /assets/defaults/03-monitoring
         print_notice "Sending Sync Statistics to Zabbix"
         silent s6-setuidgid "${ZABBIX_USER}" zabbix_sender \
-                            -c "${ZABBIX_CONFIG_PATH}"/${ZABBIX_CONFIG_FILE} \
+                            -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.last_sync \
                             -o "${log_unixtime}"
         silent zabbix_sender \
-                            -c "${ZABBIX_CONFIG_PATH}"/${ZABBIX_CONFIG_FILE} \
+                            -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.sync_status \
                             -o "${error_code}"
         silent zabbix_sender \
-                            -c "${ZABBIX_CONFIG_PATH}"/${ZABBIX_CONFIG_FILE} \
+                            -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.sync_duration \
                             -o "$(echo $((sync_finish_time-sync_start_time)))"
         if [ "$?" != "0" ] ; then
@@ -338,7 +345,7 @@ post_sync() {
 
     ### Post Sync Custom Script Support
     if [ -d "${SCRIPT_LOCATION_POST}" ] && dir_notempty "${SCRIPT_LOCATION_POST}" ; then
-        for f in $(find ${SCRIPT_LOCATION_POST} -name \*.sh -type f); do
+        for f in $(find "${SCRIPT_LOCATION_POST}" -name \*.sh -type f); do
             if var_true "${POST_SCRIPT_SKIP_X_VERIFY}" ; then
                 # file error_code start_time duration
                 ${f} "${POST_SCRIPT}" "${error_code}" "${log_unixtime}" "$(echo $((sync_finish_time-sync_start_time)))"
@@ -361,12 +368,12 @@ pre_sync() {
     if [ -n "${PRE_SCRIPT}" ] ; then
         if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
             ## script sync_start_time
-            eval ${f} "${sync_start_time}"
+            eval "${f}" "${sync_start_time}"
         else
             if [ -x "${PRE_SCRIPT}" ] ; then
                 print_notice "Found PRE_SCRIPT environment variable. Executing '${PRE_SCRIPT}"
                 ## script sync_start_time
-                eval ${f} "${sync_start_time}"
+                eval "${f}" "${sync_start_time}"
             else
                 print_error "Can't execute PRE_SCRIPT environment variable '${PRE_SCRIPT}' as its filesystem bit is not executible!"
             fi
@@ -375,10 +382,10 @@ pre_sync() {
 
     ### Pre Sync Custom Script Support
     if [ -d "${SCRIPT_LOCATION_PRE}" ] && dir_notempty "${SCRIPT_LOCATION_PRE}" ; then
-        for f in $(find ${SCRIPT_LOCATION_PRE} -name \*.sh -type f); do
+        for f in $(find "${SCRIPT_LOCATION_PRE}" -name \*.sh -type f); do
             if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
                 ## script sync_start_time
-                eval ${f} "${sync_start_time}"
+                eval "${f}" "${sync_start_time}"
             else
                 if [ -x "${f}" ] ; then
                     print_notice "Executing pre sync custom script : '${f}'"

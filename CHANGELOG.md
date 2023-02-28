@@ -1,3 +1,13 @@
+## 7.0.3 2023-02-28 <dave at tiredofit dot ca>
+
+   ### Added
+      - Split log files into their own dated directories and utilize manual logorotate to compress files > 2 days and delete > 7
+
+   ### Changed
+      - Shellcheck fixes
+      - AUTO_UPGRADE function argument fix
+
+
 ## 7.0.2 2023-02-27 <dave at tiredofit dot ca>
 
    ### Changed
