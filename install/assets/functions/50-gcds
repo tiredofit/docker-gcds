@@ -178,7 +178,7 @@ notify() {
                                         -r "${MAIL_FROM}" \
                                         -s "[GCDS] [${DOMAIN}] ${3}" \
                                         -S smtp="${SMTP_HOST}":"${SMTP_PORT}" \
-                                        "${mail_recipients}"
+                                        "${mail_recipient}"
 Time: ${1}
 Log File: {2}
 Error Code: ${3}
