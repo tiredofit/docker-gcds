@@ -1,3 +1,9 @@
+## 7.0.4 2023-03-01 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for multiple mail recipients splitting notifications into seperate messages to hide recipient list.
+
+
 ## 7.0.3 2023-02-28 <dave at tiredofit dot ca>
 
    ### Added
