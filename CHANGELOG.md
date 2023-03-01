@@ -1,3 +1,9 @@
+## 7.0.5 2023-03-01 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fetch store and replace timestamp of directories when logrotating
+
+
 ## 7.0.4 2023-03-01 <dave at tiredofit dot ca>
 
    ### Changed

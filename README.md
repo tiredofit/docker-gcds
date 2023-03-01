@@ -37,11 +37,11 @@ This image needs manual configuration to get started. You will need to manually 
   - [Environment Variables](#environment-variables)
     - [Base Images used](#base-images-used)
     - [Notifications](#notifications)
-    - [Custom Notifications](#custom-notifications)
-    - [Email Notifications](#email-notifications)
-    - [Matrix Notifications](#matrix-notifications)
-    - [Mattermost Notifications](#mattermost-notifications)
-    - [Rocketchat Notifications](#rocketchat-notifications)
+      - [Custom Notifications](#custom-notifications)
+      - [Email Notifications](#email-notifications)
+      - [Matrix Notifications](#matrix-notifications)
+      - [Mattermost Notifications](#mattermost-notifications)
+      - [Rocketchat Notifications](#rocketchat-notifications)
 - [Maintenance](#maintenance)
   - [Shell Access](#shell-access)
   - [Manual Synchronization](#manual-synchronization)
@@ -128,7 +128,7 @@ Be sure to view the following repositories to understand all the customizable op
 | ------------------- | --------------------------------------------------------------------------------- | ------- |
 | `NOTIFICATION_TYPE` | `CUSTOM` `EMAIL` `MATRIX` `MATTERMOST` `ROCKETCHAT` - Seperate Multiple by commas |         |
 
-#### Custom Notifications
+##### Custom Notifications
 
 The following is sent to the custom script. Use how you wish:
 
@@ -145,7 +145,7 @@ $5 body/error message
 | `NOTIFICATION_CUSTOM_SCRIPT` | Path and name of custom script to execute notification. |         |
 
 
-#### Email Notifications
+##### Email Notifications
 | Parameter   | Description                                                                               | Default |
 | ----------- | ----------------------------------------------------------------------------------------- | ------- |
 | `MAIL_FROM` | What email address to send mail from for errors                                           |         |
@@ -153,7 +153,7 @@ $5 body/error message
 | `SMTP_HOST` | What SMTP server to use for sending mail                                                  |         |
 | `SMTP_PORT` | What SMTP port to use for sending mail                                                    |         |
 
-#### Matrix Notifications
+##### Matrix Notifications
 
 Fetch a `MATRIX_ACCESS_TOKEN`:
 
@@ -175,21 +175,19 @@ Copy the JSON response `access_token` that will look something like this:
 
 
 
-#### Mattermost Notifications
+##### Mattermost Notifications
 | Parameter                | Description                                                                                  | Default |
 | ------------------------ | -------------------------------------------------------------------------------------------- | ------- |
 | `MATTERMOST_WEBHOOK_URL` | Full URL to send webhook notifications to                                                    |         |
 | `MATTERMOST_RECIPIENT`   | Channel or User to send Webhook notifications to. Send to multiple by seperating with comma. |         |
-| `MATTERMOST_USERNAME`    | Username to send as eg `GCDS`                                                                |
+| `MATTERMOST_USERNAME`    | Username to send as eg `GCDS`                                                                |         |
 
-#### Rocketchat Notifications
-
-
+##### Rocketchat Notifications
 | Parameter                | Description                                                                                  | Default |
 | ------------------------ | -------------------------------------------------------------------------------------------- | ------- |
 | `ROCKETCHAT_WEBHOOK_URL` | Full URL to send webhook notifications to                                                    |         |
 | `ROCKETCHAT_RECIPIENT`   | Channel or User to send Webhook notifications to. Send to multiple by seperating with comma. |         |
-| `ROCKETCHAT_USERNAME`    | Username to send as eg `GCDS`                                                                |
+| `ROCKETCHAT_USERNAME`    | Username to send as eg `GCDS`                                                                |         |
 
 
 ## Maintenance

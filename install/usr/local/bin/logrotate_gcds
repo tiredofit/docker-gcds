@@ -5,9 +5,12 @@ source /assets/defaults/05-logging
 source /assets/defaults/50-gcds
 
 ## Compress each log 2 days old
+timestamp_2dayold_directory=$(stat $(date --date='2 days ago' +'%Y%m%d') | grep '^Modify:' | awk -F ': ' '{print $2}')
+timestamp_2dayold_unixtime=$(date -d'@${timestamp_2dayold_directory}' +'%s')
 for logfile in "${LOG_PATH}"/"$(date --date='2 days ago' +'%Y%m%d')"/"$(date --date='2 days ago' +'%Y%m%d')"_*.log ; do
-    sudo -u gcds zstd --rm --rsyncable "${logfile}"
+    sudo -u restic zstd --rm --rsyncable "${logfile}"
 done
+touch -t $(date -d'@${timestamp_2dayold_unixtime}' +'%Y%m%d%H%m.%S') "${LOG_PATH}"/"$(date --date='2 days ago' +'%Y%m%d')"
 
 for logfile in "${LOG_PATH}"/"$(date --date='2 days ago' +'%Y%m%d')"/"$(date --date='2 days ago' +'%Y%m%d')"_*.error ; do
     sudo -u gcds zstd --rm --rsyncable "${logfile}"
