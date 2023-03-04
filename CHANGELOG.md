@@ -1,3 +1,9 @@
+## 7.0.6 2023-03-04 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Reset log directory with modification time after performing compression
+
+
 ## 7.0.5 2023-03-01 <dave at tiredofit dot ca>
 
    ### Changed
