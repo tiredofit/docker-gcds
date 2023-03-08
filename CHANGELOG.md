@@ -1,3 +1,9 @@
+## 7.0.7 2023-03-08 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix to logrotate_gcds script
+
+
 ## 7.0.6 2023-03-04 <dave at tiredofit dot ca>
 
    ### Changed
