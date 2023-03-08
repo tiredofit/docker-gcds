@@ -1,3 +1,9 @@
+## 7.0.8 2023-03-08 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Quotes fix for logrotate_gcds
+
+
 ## 7.0.7 2023-03-08 <dave at tiredofit dot ca>
 
    ### Changed
