@@ -66,7 +66,7 @@ Clone this repository and build the image with `docker build <arguments> (imagen
 Builds of the image are available on [Docker Hub](https://hub.docker.com/r/tiredofit/gcds)
 
 ```bash
-docker pull docker.io/tiredofdit/gcds:(latest)
+docker pull docker.io/tiredofit/gcds:(latest)
 ```
 
 ## Configuration
