@@ -189,6 +189,21 @@ EOF
         fi
     }
 
+    notification_matrix() {
+        if [ -z "${MATRIX_HOST}" ] ; then print_error "[notifications] No MATRIX_HOST variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if [ -z "${MATRIX_ROOM}" ] ; then print_error "[notifications] No MATRIX_ROOM variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if [ -z "${MATRIX_ACCESS_TOKEN}" ] ; then print_error "[notifications] No MATRIX_ACCESS_TOKEN variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
+        if var_nottrue "${skip_matrix}" ; then
+            matrix_rooms=$(echo "${MATRIX_ROOM}" | tr "," "\n")
+            for matrix_room in $matrix_rooms ; do
+                curl \
+                        -XPOST \
+                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[GCDS] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}\"*hello}" \
+                        "${MATRIX_HOST}/_matrix/client/r0/rooms/${matrix_room}/send/m.room.message?access_token=${MATRIX_ACCESS_TOKEN}"
+            done
+        fi
+    }
+
     notification_mattermost() {
         if [ -z "${MATTERMOST_RECIPIENT}" ] ; then print_error "[notifications] No MATTERMOST_RECIPIENT variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
         if [ -z "${MATTERMOST_USERNAME}" ] ; then print_error "[notifications] No MATTERMOST_USERNAME variable set - Skipping sending Mattermost notifications" ; skip_mattermost=true ; fi
@@ -203,21 +218,6 @@ EOF
                                         -m 5 \
                                         --data-urlencode "${payload}" \
                                         "${MATTERMOST_WEBHOOK_URL}"
-            done
-        fi
-    }
-
-    notification_matrix() {
-        if [ -z "${MATRIX_HOST}" ] ; then print_error "[notifications] No MATRIX_HOST variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
-        if [ -z "${MATRIX_ROOM}" ] ; then print_error "[notifications] No MATRIX_ROOM variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
-        if [ -z "${MATRIX_ACCESS_TOKEN}" ] ; then print_error "[notifications] No MATRIX_ACCESS_TOKEN variable set - Skipping sending matrix notifications" ; skip_matrix=true ; fi
-        if var_nottrue "${skip_matrix}" ; then
-            matrix_rooms=$(echo "${MATRIX_ROOM}" | tr "," "\n")
-            for matrix_room in $matrix_rooms ; do
-                curl \
-                        -XPOST \
-                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[GCDS] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}\"*hello}" \
-                        "${MATRIX_HOST}/_matrix/client/r0/rooms/${matrix_room}/send/m.room.message?access_token=${MATRIX_ACCESS_TOKEN}"
             done
         fi
     }
