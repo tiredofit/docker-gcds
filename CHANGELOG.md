@@ -1,3 +1,9 @@
+## 7.0.9 2023-07-10 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for NOTIFICATION_TYPE=MATRIX not sending valid JSON
+
+
 ## 7.0.8 2023-03-08 <dave at tiredofit dot ca>
 
    ### Changed

@@ -198,7 +198,7 @@ EOF
             for matrix_room in $matrix_rooms ; do
                 curl \
                         -XPOST \
-                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[GCDS] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}\"*hello}" \
+                        -d "{\"msgtype\":\"m.text\", \"body\":\"*[GCDS] ${3}*\n${4}\n*Timestamp:* ${1}\n*Logfile:* ${2}\n*Error Code: ${3}*\"}" \
                         "${MATRIX_HOST}/_matrix/client/r0/rooms/${matrix_room}/send/m.room.message?access_token=${MATRIX_ACCESS_TOKEN}"
             done
         fi
