@@ -1,7 +1,6 @@
 {
     "zabbix_export": {
-        "version": "6.2",
-        "date": "2023-01-28T21:45:24Z",
+        "version": "6.4",
         "template_groups": [
             {
                 "uuid": "a571c0d144b14fd4a87a9d9b2aa9fcd6",
@@ -25,6 +24,12 @@
                         "name": "GCDS: Last Sync Time",
                         "key": "gcds.last_sync",
                         "history": "7d",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "Google Cloud Directory Sync"
+                            }
+                        ],
                         "triggers": [
                             {
                                 "uuid": "62e511e66b6545dd933d921bd4088168",
@@ -43,11 +48,17 @@
                         "delay": "0",
                         "history": "7d",
                         "description": "How long the sync took",
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "Google Cloud Directory Sync"
+                            }
+                        ],
                         "triggers": [
                             {
                                 "uuid": "4989397e34a847b2aca79bd34688005e",
-                                "expression": "last(/GCDS/gcds.sync_duration)<10",
-                                "name": "GCDS: Last Sync duration under 10 seconds",
+                                "expression": "last(/GCDS/gcds.sync_duration)<3",
+                                "name": "GCDS: Last Sync duration under 3 seconds",
                                 "priority": "AVERAGE",
                                 "manual_close": "YES"
                             }
@@ -64,6 +75,12 @@
                         "valuemap": {
                             "name": "Sync Status"
                         },
+                        "tags": [
+                            {
+                                "tag": "Application",
+                                "value": "Google Cloud Directory Sync"
+                            }
+                        ],
                         "triggers": [
                             {
                                 "uuid": "78ba5ff8d88946e5abb51ebf1a77cc18",
@@ -78,6 +95,9 @@
                         "uuid": "dc0318c0e31f43f69be713e85f1b5d15",
                         "name": "GCDS: Version",
                         "key": "gcds.version",
+                        "trends": "0",
+                        "status": "DISABLED",
+                        "value_type": "TEXT",
                         "tags": [
                             {
                                 "tag": "Application",

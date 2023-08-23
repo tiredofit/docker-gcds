@@ -144,7 +144,6 @@ configure_monitoring() {
 
 UserParameter=gcds.version,/gcds/sync-cmd -v | head -n 1 | awk '{print \$2}'
 EOF
-    create_zabbix gcds
 }
 
 notify() {
@@ -314,7 +313,7 @@ post_sync() {
         silent s6-setuidgid "${ZABBIX_USER}" zabbix_sender \
                             -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.last_sync \
-                            -o "${log_unixtime}"
+                            -o "${log_unixdate}"
         silent zabbix_sender \
                             -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.sync_status \

@@ -1,3 +1,9 @@
+## 7.0.10 2023-08-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Fix for Zabbix monitoring (No Syncs performed in 2 days)
+
+
 ## 7.0.9 2023-07-10 <dave at tiredofit dot ca>
 
    ### Changed
