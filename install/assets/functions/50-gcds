@@ -314,11 +314,11 @@ post_sync() {
                             -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.last_sync \
                             -o "${log_unixdate}"
-        silent zabbix_sender \
+        silent s6-setuidgid "${ZABBIX_USER}" zabbix_sender \
                             -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.sync_status \
                             -o "${error_code}"
-        silent zabbix_sender \
+        silent s6-setuidgid "${ZABBIX_USER}" zabbix_sender \
                             -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
                             -k gcds.sync_duration \
                             -o "$(echo $((sync_finish_time-sync_start_time)))"

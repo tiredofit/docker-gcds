@@ -1,3 +1,10 @@
+## 7.0.11 2023-08-23 <dave at tiredofit dot ca>
+
+   ### Changed
+      - Adjust Zabbix template
+      - Run Zabbix as Zabbix user for all zabbix_sender commands
+
+
 ## 7.0.10 2023-08-23 <dave at tiredofit dot ca>
 
    ### Changed

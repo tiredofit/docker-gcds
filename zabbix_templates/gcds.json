@@ -22,8 +22,11 @@
                     {
                         "uuid": "3e7fa36741144689b2e21c8f8a592676",
                         "name": "GCDS: Last Sync Time",
+                        "type": "TRAP",
                         "key": "gcds.last_sync",
+                        "delay": "0",
                         "history": "7d",
+                        "units": "unixtime",
                         "tags": [
                             {
                                 "tag": "Application",
@@ -95,6 +98,7 @@
                         "uuid": "dc0318c0e31f43f69be713e85f1b5d15",
                         "name": "GCDS: Version",
                         "key": "gcds.version",
+                        "delay": "12h",
                         "trends": "0",
                         "status": "DISABLED",
                         "value_type": "TEXT",
