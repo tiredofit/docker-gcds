@@ -1,3 +1,9 @@
+## 7.0.12 2023-09-05 <dave at tiredofit dot ca>
+
+   ### Added
+      - GCDS 5.0.28
+
+
 ## 7.0.11 2023-08-23 <dave at tiredofit dot ca>
 
    ### Changed

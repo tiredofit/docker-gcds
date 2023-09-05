@@ -139,7 +139,7 @@ configure_monitoring() {
     source /assets/defaults/03-monitoring
     cat <<EOF > "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}".d/gcds.conf
 # Zabbix GCDS Exporter Configuration - Automatically Generated
-# Find Companion Zabbix Server Templates at https://github.com/tiredofit/docker-kopano
+# Find Companion Zabbix Server Templates at https://github.com/tiredofit/docker-gcds
 # Autoregister=gcds
 
 UserParameter=gcds.version,/gcds/sync-cmd -v | head -n 1 | awk '{print \$2}'
