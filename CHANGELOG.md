@@ -1,3 +1,10 @@
+## 7.0.13 2024-03-10 <dave at tiredofit dot ca>
+
+   ### Added
+      - GCDS 5.0.31
+      - Debian Bookworm base
+
+
 ## 7.0.12 2023-09-05 <dave at tiredofit dot ca>
 
    ### Added

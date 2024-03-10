@@ -1,10 +1,10 @@
 ARG DISTRO=debian
-ARG DISTRO_VARIANT=bullseye
+ARG DISTRO_VARIANT=bookworm
 
 FROM docker.io/tiredofit/${DISTRO}:${DISTRO_VARIANT}
 LABEL maintainer="Dave Conroy (dave at tiredofit dot ca)"
 
-ENV GCDS_VERSION=5.0.28 \
+ENV GCDS_VERSION=5.0.31 \
     APP_USER=gcds \
     IMAGE_NAME="tiredofit/gcds" \
     IMAGE_REPO_URL="https://github.com/tiredofit/docker-gcds/"
