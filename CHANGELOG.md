@@ -1,3 +1,9 @@
+## 7.0.15 2025-05-13 <dave at tiredofit dot ca>
+
+   ### Added
+      - Google Cloud Directory Sync 5.0.39
+
+
 ## 7.0.14 2024-09-08 <dave at tiredofit dot ca>
 
    ### Added
