@@ -1,4 +1,6 @@
-#!/command/with-contenv bash
+# SPDX-FileCopyrightText: © 2025 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
 
 AUTO_UPGRADE_CONFIG=${AUTO_UPGRADE_CONFIG:-"FALSE"}
 CONFIG_PATH=${CONFIG_PATH:-"/config/"}
@@ -10,5 +12,4 @@ LOG_LEVEL=${LOG_LEVEL:-"INFO"}
 LOG_PATH=${LOG_PATH:-"/logs/"}
 SYNC_BEGIN=${SYNC_BEGIN:-"+0"}
 SYNC_INTERVAL=${SYNC_INTERVAL:-"60"}
-
 if var_true "${FLUSH_REMOTE_DATA}" ; then flush_arg="--flush" ; fi

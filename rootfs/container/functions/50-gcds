@@ -1,16 +1,19 @@
-#!/command/with-contenv bash
+# SPDX-FileCopyrightText: © 2025 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
 
-bootstrap_filesystem() {
-    if [ ! -d "${CONFIG_PATH}" ] ; then
-        mkdir -p "${CONFIG_PATH}"
-    fi
+gcds_bootstrap_filesystem() {
+    create_folder \
+                    "${CONFIG_PATH},\
+                    ${CONFIG_PATH}/SyncState,
+                    ${LOG_PATH}" \
+                    ${APP_USER}:root 755
 
     print_debug "Creating Sync State folders and linking previous Java State"
-    mkdir -p "${CONFIG_PATH}"/SyncState
 
     if [ ! -d "${CONFIG_PATH}"/.java ]; then
         print_debug "Copying Java State to container"
-        cp -R /assets/gcds/.java "${CONFIG_PATH}"
+        cp -aR /container/data/gcds/.java "${CONFIG_PATH}"
     fi
 
     ln -sf "${CONFIG_PATH}"/.java /gcds/.java
@@ -18,18 +21,11 @@ bootstrap_filesystem() {
     ln -sf "${CONFIG_PATH}"/GADS_nonAddressPrimaryKeyFile.tsv /gcds/GADS_nonAddressPrimaryKeyFile.tsv
 
     if [ "${LOG_TYPE,,}" = "both" ] || [ "${LOG_TYPE,,}" = "file" ] ; then
-        if [ ! -d "${LOG_PATH}" ] ; then
-            mkdir -p "${LOG_PATH}"
-        fi
-
+        echo "0 0 * * * /usr/local/bin/logrotate_gcds >/dev/null 2>&1" | silent tee /container/cron/gcds_logrotate
     fi
-    echo "0 0 * * * /usr/local/bin/logrotate_gcds >/dev/null 2>&1" > /assets/cron/gcds_logrotate
-    chown -R gcds:gcds \
-                        "${CONFIG_PATH}" \
-                        "${LOG_PATH}"
 }
 
-check_errors() {
+gcds_check_errors() {
     halt_scheduling() {
         if var_true "${ENABLE_SCHEDULER}" ; then
             print_error "Halting any scheduling. You will need to fix the error and restart the container to enable scheduled syncing."
@@ -43,7 +39,7 @@ check_errors() {
         if [ "$(stat --format=%Y "${CONFIG_PATH}"/"${lockfile}")" -le $(( $(date +%s) - 1800 )) ]; then
             error_code=100
             rm -rf  "${CONFIG_PATH}"/syncState/"${lockfile}"
-            notify \
+            gcds_notify \
                     "${log_date}" \
                     "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename}" \
                     "${error_code}" \
@@ -55,7 +51,7 @@ check_errors() {
     if grep -qF '[FATAL] [usersyncapp.cli.Sync] Unable to load configuration from specified file' /tmp/"${log_filename}" ; then
         error_code=101
         print_error "Problem with configuration file - See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
-        notify \
+        gcds_notify \
                 "${log_date}" \
                 "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
@@ -70,7 +66,7 @@ check_errors() {
     if grep -qF '[FATAL] [usersyncapp.cli.Sync] The configuration specified is from another version of Google Cloud Directory Sync.' /tmp/"${log_filename}" ; then
         error_code=102
         print_error "Configuration file is from another version. Login using the GUI, review the configuration and save the configuration and restart. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
-        notify \
+        gcds_notify \
                 "${log_date}" \
                 "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
@@ -85,7 +81,7 @@ check_errors() {
     if grep -qF '[ERROR] [usersyncapp.sync.ConfigErrorHandler]' /tmp/"${log_filename}" ; then
         error_code=103
         print_error "Detecting synchronization error with the OAUTH key. You will likely need to reauthorize using the GUI and restart the container. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
-        notify \
+        gcds_notify \
                 "${log_date}" \
                 "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
@@ -100,7 +96,7 @@ check_errors() {
     if grep -qF '"LDAP Plugin" threw a fatal exception' /tmp/"${log_filename}" ; then
         error_code=104
         print_error "Detecting Fatal error due to LDAP problems. Please reconfigure and restart the container. See more details at '${LOG_PATH}/${log_filename%%.*}.error'"
-        notify \
+        gcds_notify \
                 "${log_date}" \
                 "${LOG_PATH}/$(date +"%Y%m%d")/${log_filename%%.*}.error" \
                 "${error_code}" \
@@ -118,7 +114,7 @@ check_errors() {
     silent rm -rf /tmp/"${log_filename}"
 }
 
-configure_gcds() {
+gcds_configure_gcds() {
     if [ -f "${CONFIG_PATH}"/"${CONFIG_FILE}" ] ; then
         if var_true "${AUTO_UPGRADE_CONFIG}" ; then
             if [ -n "${OAUTH_TOKEN}" ] ; then
@@ -135,18 +131,20 @@ configure_gcds() {
     fi
 }
 
-configure_monitoring() {
-    source /assets/defaults/03-monitoring
-    cat <<EOF > "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}".d/gcds.conf
+gcds_configure_monitoring() {
+    if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
+        source /container/base/defaults/defaults/*-monitoring
+        cat <<EOF > "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}".d/gcds.conf
 # Zabbix GCDS Exporter Configuration - Automatically Generated
 # Find Companion Zabbix Server Templates at https://github.com/tiredofit/docker-gcds
 # Autoregister=gcds
 
 UserParameter=gcds.version,/gcds/sync-cmd -v | head -n 1 | awk '{print \$2}'
 EOF
+    fi
 }
 
-notify() {
+gcds_notify() {
     notification_custom() {
         if [ -n "${NOTIFICATION_SCRIPT}" ] ; then
             if var_true "${NOTIFICATION_SCRIPT_SKIP_X_VERIFY}" ; then
@@ -275,7 +273,7 @@ EOF
     done
 }
 
-perform_sync() {
+gcds_perform_sync() {
     log_unixdate=$(date +"%s")
     log_date=$(date -d @"${log_unixdate}" +"%Y%m%d_%H%M%S")
     log_filename=$log_date-${LOG_FILE}
@@ -303,12 +301,11 @@ perform_sync() {
     app_exit_code=$?
 }
 
-post_sync() {
+gcds_post_sync() {
     sync_finish_time=$(date +"%s")
     sync_total_time=$(echo $((sync_finish_time-sync_start_time)))
 
-    if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ] ; then
-        source /assets/defaults/03-monitoring
+    if var_true "${CONTAINER_ENABLE_MONITORING}" && [ "${CONTAINER_MONITORING_BACKEND,,}" = "zabbix" ]; then
         print_notice "Sending Sync Statistics to Zabbix"
         silent s6-setuidgid "${ZABBIX_USER}" zabbix_sender \
                             -c "${ZABBIX_CONFIG_PATH}"/"${ZABBIX_CONFIG_FILE}" \
@@ -362,7 +359,7 @@ post_sync() {
     unset error_code
 }
 
-pre_sync() {
+gcds_pre_sync() {
     ### Pre Script Support
     if [ -n "${PRE_SCRIPT}" ] ; then
         if var_true "${PRE_SCRIPT_SKIP_X_VERIFY}" ; then
@@ -398,28 +395,28 @@ pre_sync() {
     fi
 }
 
-setup_container_mode() {
-    if [ -f "/tmp/.container/gcds_mode/.mode-env" ]; then
+gcds_setup_container_mode() {
+    if [ -f "/container/state/gcds/mode" ]; then
         print_debug "Importing MODE environment generated variables"
-        source /tmp/.container/gcds_mode/.mode-env
+        source /container/state/gcds/mode
     else
-        mkdir -p /tmp/.container/gcds_mode/
+        mkdir -p /container/state/gcds
         sanity_var MODE "Container Mode 'GUI' 'STANDALONE' 'SCHEDULER' 'ALL' "
         if [ "${MODE,,}" = "all" ] ; then
             print_debug "Container Mode: ALL"
             print_debug "Creating MODE environment generated variables"
-            echo "ENABLE_SCHEDULER=TRUE" >> /tmp/.container/gcds_mode/.mode-env
+            echo "ENABLE_SCHEDULER=TRUE" | silent tee -a /container/state/gcds/mode
         else
             modes=$(echo "$MODE" | tr "," "\n")
             for mode in $modes ; do
                 case "${mode,,}" in
                     "standalone" | "manual" )
                         print_debug "Enabling Container Mode for: STANDALONE"
-                        echo "ENABLE_STANDALONE=TRUE" >> /tmp/.container/gcds_mode/.mode-env
+                        echo "ENABLE_STANDALONE=TRUE" | silent tee -a /container/state/gcds/mode
                     ;;
                     "scheduler" )
                         print_debug "Enabling Container Mode for: SCHEDULER"
-                        echo "ENABLE_SCHEDULER=TRUE" >> /tmp/.container/gcds_mode/.mode-env
+                        echo "ENABLE_SCHEDULER=TRUE" | silent tee -a /container/state/gcds/mode
                     ;;
                     *)
                         print_error "Unknown 'MODE' environment variable - exitting.."
@@ -428,7 +425,7 @@ setup_container_mode() {
                 esac
             done
         fi
-        source /tmp/.container/gcds_mode/.mode-env
+        source /container/state/gcds/mode
     fi
 }
 

@@ -1,11 +1,14 @@
 #!/command/with-contenv bash
+# SPDX-FileCopyrightText: © 2025 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
 
-source /assets/functions/00-container
+source /container/base/functions/container/init
 check_container_initialized
 check_service_initialized init 50-gcds
-source /assets/functions/50-gcds
-source /assets/defaults/50-gcds
-PROCESS_NAME="gcds-scheduler"
+source /container/functions/50-gcds
+source /container/defaults/50-gcds
+SERVICE_NAME="gcds-scheduler"
 liftoff
 
 setup_container_mode
@@ -37,12 +40,12 @@ fi
 while true; do
     sync_start_time=$(date +"%s")
     print_debug "GCDS Sync routines started time: $(date +'%Y-%m-%d %T %Z')"
-    pre_sync
-    perform_sync
-    check_errors
+    gcds_pre_sync
+    gcds_perform_sync
+    gcds_check_errors
     sync_finish_time=$(date +"%s")
     sync_total_time=$(echo $((sync_finish_time-sync_start_time)))
-    post_sync
+    gcds_post_sync
     if [ -z "$app_exit_code" ] ; then app_exit_code="0" ; fi
     print_info "GCDS sync routines finish time: $(date -d @${sync_finish_time} +"%Y-%m-%d %T %Z") with exit code ${app_exit_code}"
     print_notice "GCDS sync routines time taken: $(echo ${sync_total_time} | awk '{printf "Hours: %d Minutes: %02d Seconds: %02d", $1/3600, ($1/60)%60, $1%60}')"

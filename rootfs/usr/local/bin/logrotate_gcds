@@ -1,8 +1,8 @@
 #!/command/with-contenv bash
 
-source /assets/functions/00-container
-source /assets/defaults/05-logging
-source /assets/defaults/50-gcds
+source /container/base/functions/container/init
+source /container/defaults/05-logging
+source /container/defaults/50-gcds
 
 ## Compress each log 2 days old
 timestamp_2dayold_unixtime="$(stat -c %Y "${LOG_PATH}"/"$(date --date='2 days ago' +'%Y%m%d')")"

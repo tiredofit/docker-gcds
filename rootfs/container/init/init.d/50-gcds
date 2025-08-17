@@ -1,0 +1,33 @@
+#!/command/with-contenv bash
+# SPDX-FileCopyrightText: © 2025 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
+
+source /container/base/functions/container/init
+prepare_service
+SERVICE_NAME="gcds"
+
+gcds_setup_container_mode
+set -x
+if [ ! -f "/container/state/restart" ] ; then
+    if var_true "${ENABLE_STANDALONE}" ; then
+        print_debug "Configuring Standalone Mode"
+        service_stop 50-gcds-scheduler
+        liftoff
+    fi
+
+    if var_true "${ENABLE_SCHEDULER}" ; then
+        print_debug "Configuring Scheduler"
+    else
+        service_stop 50-gcds-scheduler
+    fi
+
+    gcds_bootstrap_filesystem
+    gcds_configure_gcds
+    gcds_configure_monitoring
+fi
+
+print_debug "Cleanup any sync lock files"
+rm -rf "${CONFIG_PATH}"/SyncState/*.lock
+
+liftoff

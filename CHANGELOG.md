@@ -1,9 +1,11 @@
-## 7.0.99 2025-08-16 <dave at tiredofit dot ca>
-
-Add EOL Notice for image and direct to new image location
+## 8.0.0 2025-08-16 <dave at tiredofit dot ca>
 
    ### Added
+      - Switch to nfrastack/container-base
+      - Debian Trixie
 
+
+## 7.0.99 2025-06-16 EOL tiredofit/gcds
 
 ## 7.0.15 2025-05-13 <dave at tiredofit dot ca>
 
@@ -15,7 +17,6 @@ Add EOL Notice for image and direct to new image location
 
    ### Added
       - GCDS 5.0.37
-
 
 ## 7.0.13 2024-03-10 <dave at tiredofit dot ca>
 

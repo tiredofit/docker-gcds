@@ -1,0 +1,3 @@
+#!/bin/bash
+
+exec /container/run/available/50-gcds-scheduler/run NOW
