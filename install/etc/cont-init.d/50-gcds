@@ -27,4 +27,30 @@ fi
 print_debug "Cleanup any sync lock files"
 rm -rf "${CONFIG_PATH}"/SyncState/*.lock
 
+cat <<EOF
+
+***************************************************************************************
+*                                                                                     *
+*                    END OF LIFE NOTICE AUGUST 16, 2025                               *
+*                               tiredofit/gcds                                        *
+*                                                                                     *
+* This image is no longer maintained as of and will not receive updates.              *
+*                                                                                     *
+* A successor image is available at:                                                  *
+*                                                                                     *
+* Repository | Documentation:                                                         *
+*   - https://github.com/nfrastack/container-gcds                                     *
+*                                                                                     *
+* Image Registries:                                                                   *
+*   - https://hub.docker.com/r/nfrastack/gcds                                         *
+*   - https://github.com/nfrastack/container-gcds/pkgs/container/container-gcds       *
+*                                                                                     *
+* Please visit https://nfrastack.com for more information.                            *
+*                                                                                     *
+***************************************************************************************
+
+EOF
+
+sleep 15
+
 liftoff

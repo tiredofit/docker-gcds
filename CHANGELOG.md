@@ -1,3 +1,10 @@
+## 7.0.99 2025-08-16 <dave at tiredofit dot ca>
+
+Add EOL Notice for image and direct to new image location
+
+   ### Added
+
+
 ## 7.0.15 2025-05-13 <dave at tiredofit dot ca>
 
    ### Added
